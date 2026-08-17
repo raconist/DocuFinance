@@ -1,0 +1,134 @@
+import React from 'react';
+import { ShieldCheck, Lock, Sparkles, FileSpreadsheet, Database, Sun, Moon, Home, ChevronRight } from 'lucide-react';
+import { TRANSLATIONS } from '../utils/i18n';
+
+export default function Navbar({ 
+  onOpenSecurity, 
+  onOpenPricing, 
+  onOpenHistory, 
+  onSelectBankPage, 
+  onGoHome,
+  currentView,
+  hasActiveData,
+  lang = 'tr',
+  onLangChange,
+  theme = 'dark',
+  onToggleTheme 
+}) {
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
+  const isDark = theme === 'dark';
+
+  return (
+    <header className={`sticky top-0 z-40 w-full border-b transition-colors duration-300 backdrop-blur-xl ${
+      isDark 
+        ? 'border-white/10 bg-[#070b13]/85 text-white' 
+        : 'border-slate-200/80 bg-white/90 text-slate-900 shadow-sm'
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        
+        {/* Brand Logo & Home Navigation */}
+        <div className="flex items-center gap-4 cursor-pointer select-none" onClick={onGoHome}>
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 p-0.5 shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform">
+            <div className={`w-full h-full rounded-[14px] flex items-center justify-center ${isDark ? 'bg-[#0a1122]' : 'bg-white'}`}>
+              <FileSpreadsheet className="w-6 h-6 text-emerald-500" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`font-display text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                DocuFinance<span className="text-emerald-500">.ai</span>
+              </span>
+              <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full border ${
+                isDark 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
+                v2.6
+              </span>
+            </div>
+            <p className={`text-xs hidden sm:block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {t.brandSubtitle}
+            </p>
+          </div>
+        </div>
+
+        {/* Navigation & Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Direct Home / Ana Sayfa Button */}
+          <button
+            onClick={onGoHome}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+              !hasActiveData && currentView === 'app'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-extrabold'
+                : isDark 
+                  ? 'bg-slate-900 hover:bg-slate-800 border-white/10 text-slate-300' 
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+            }`}
+            title="Ana Sayfaya Dön"
+          >
+            <Home className="w-4 h-4 text-emerald-500" />
+            <span className="hidden sm:inline">{lang === 'tr' ? 'Ana Sayfa' : lang === 'de' ? 'Startseite' : 'Home'}</span>
+          </button>
+
+          {/* Theme Toggle (Light / Dark) */}
+          <button
+            onClick={onToggleTheme}
+            className={`p-2.5 rounded-xl border transition-all ${
+              isDark 
+                ? 'bg-slate-900 border-white/10 text-amber-400 hover:bg-slate-800' 
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+            }`}
+            title={isDark ? 'Açık Temaya Geç (Light Mode)' : 'Koyu Temaya Geç (Dark Mode)'}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          {/* Multi-Language Switcher */}
+          <div className={`flex items-center border rounded-xl p-1 text-xs font-bold ${
+            isDark ? 'bg-slate-900 border-white/10' : 'bg-slate-100 border-slate-200'
+          }`}>
+            {['tr', 'en', 'de'].map((l) => (
+              <button
+                key={l}
+                onClick={() => onLangChange(l)}
+                className={`px-2.5 py-1 rounded-lg uppercase transition-all ${
+                  lang === l 
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm font-extrabold' 
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {/* History / DB Trigger */}
+          <button
+            onClick={onOpenHistory}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all group ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 border-white/10 text-slate-200' 
+                : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-sm'
+            }`}
+            title="Kayıtlı Ekstrelerim ve Yerel DB Geçmişi"
+          >
+            <Database className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+            <span className="hidden md:inline">{t.historyBtn}</span>
+          </button>
+
+          {/* Pricing Button */}
+          <button
+            onClick={onOpenPricing}
+            className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs sm:text-sm font-extrabold text-slate-950 shadow-md shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4 fill-slate-950" />
+            <span>{t.pricingBtn}</span>
+          </button>
+
+        </div>
+
+      </div>
+    </header>
+  );
+}
