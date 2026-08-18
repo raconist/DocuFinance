@@ -47,6 +47,26 @@ export default function App() {
     }
   }, [theme]);
 
+  // Secret Admin Access via URL (?admin=true, #admin) or Keyboard (Ctrl + Shift + A)
+  useEffect(() => {
+    // Check URL parameters
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true' || params.get('admin') === '1' || window.location.hash === '#admin') {
+      setIsAdminOpen(true);
+    }
+
+    // Secret Keybind: Ctrl + Shift + A (or Cmd + Shift + A)
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        setIsAdminOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleToggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -275,9 +295,6 @@ export default function App() {
             </button>
             <button onClick={() => setIsPricingOpen(true)} className="hover:text-emerald-500 transition-colors">
               {t.pricingBtn}
-            </button>
-            <button onClick={() => setIsAdminOpen(true)} className="hover:text-amber-400 text-amber-500/80 transition-colors font-bold">
-              ⚙️ {lang === 'tr' ? 'Yönetici Paneli' : 'Admin Panel'}
             </button>
           </div>
 

@@ -57,11 +57,18 @@ export default function Navbar({
               <span className={`font-display text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
                 DocuFinance<span className="text-emerald-500">.ai</span>
               </span>
-              <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full border ${
-                isDark 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              }`}>
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenAdmin();
+                }}
+                className={`px-2 py-0.5 text-[11px] font-bold rounded-full border cursor-pointer hover:scale-105 transition-transform ${
+                  isDark 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}
+                title="Yönetici Girişi (Gizli)"
+              >
                 v2.8 Pro
               </span>
             </div>
@@ -90,31 +97,42 @@ export default function Navbar({
             <span className="hidden sm:inline">{t.homeBtn}</span>
           </button>
 
-          {/* Theme Toggle (Light / Dark) */}
+          {/* Directory of Supported Banks Button */}
           <button
-            onClick={onToggleTheme}
-            className={`p-2.5 rounded-xl border transition-all ${
-              isDark 
-                ? 'bg-slate-900 border-white/10 text-amber-400 hover:bg-slate-800' 
-                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+            onClick={() => onSelectBankPage(currentView !== 'seo')}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+              currentView === 'seo'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-extrabold'
+                : isDark 
+                  ? 'bg-slate-900 hover:bg-slate-800 border-white/10 text-slate-300' 
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
             }`}
-            title={isDark ? 'Açık Temaya Geç (Light Mode)' : 'Koyu Temaya Geç (Dark Mode)'}
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <Building2 className="w-4 h-4 text-emerald-500" />
+            <span className="hidden md:inline">{t.supportedBanksBtn}</span>
           </button>
 
-          {/* Multi-Language Switcher */}
-          <div className={`flex items-center border rounded-xl p-1 text-xs font-bold ${
-            isDark ? 'bg-slate-900 border-white/10' : 'bg-slate-100 border-slate-200'
-          }`}>
+          {/* Security & Zero-Knowledge Guarantee */}
+          <button
+            onClick={onOpenSecurity}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 border-emerald-500/30 text-emerald-400' 
+                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t.securityModalTitle}</span>
+          </button>
+
+          {/* Language Switcher Dropdown */}
+          <div className="flex items-center rounded-xl p-0.5 border border-white/10 bg-slate-900/90 text-xs font-bold text-slate-400">
             {['tr', 'en', 'de'].map((l) => (
               <button
                 key={l}
                 onClick={() => onLangChange(l)}
-                className={`px-2 py-1 rounded-lg uppercase transition-all ${
-                  lang === l 
-                    ? 'bg-emerald-500 text-slate-950 shadow-sm font-extrabold' 
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
+                className={`px-2 py-1 rounded-lg uppercase text-[11px] font-extrabold transition-colors ${
+                  lang === l ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'hover:text-white'
                 }`}
               >
                 {l}
@@ -134,20 +152,6 @@ export default function Navbar({
           >
             <Database className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
             <span className="hidden lg:inline">{t.historyBtn}</span>
-          </button>
-
-          {/* Admin Control Panel Trigger */}
-          <button
-            onClick={onOpenAdmin}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all shadow-sm ${
-              isDark 
-                ? 'bg-amber-950/40 hover:bg-amber-900/60 border-amber-500/50 text-amber-300 shadow-amber-500/10' 
-                : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
-            }`}
-            title="Yönetici Paneli (PayTR / LemonSqueezy / Kuponlar / Müşteriler)"
-          >
-            <Settings className="w-4 h-4 text-amber-400 animate-spin-slow" />
-            <span>Admin</span>
           </button>
 
           {/* User Account or Login Button */}

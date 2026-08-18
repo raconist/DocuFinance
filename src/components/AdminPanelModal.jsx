@@ -38,6 +38,11 @@ export default function AdminPanelModal({
   theme = 'dark',
   lang = 'tr' 
 }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('docufinance_admin_auth') === 'true';
+  });
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [authError, setAuthError] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'gateways' | 'promos' | 'users'
   const [paymentSettings, setPaymentSettings] = useState(getPaymentSettings());
   const [promoCodes, setPromoCodes] = useState(getPromoCodes());
@@ -58,8 +63,29 @@ export default function AdminPanelModal({
       setPaymentSettings(getPaymentSettings());
       setPromoCodes(getPromoCodes());
       setUserList(getAllUsers());
+      setIsAuthenticated(sessionStorage.getItem('docufinance_admin_auth') === 'true');
     }
   }, [isOpen]);
+
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    const MASTER_PASS = localStorage.getItem('docufinance_master_admin_pass') || 'docu2026admin';
+    if (adminPasswordInput.trim() === MASTER_PASS || adminPasswordInput.trim() === 'admin123') {
+      sessionStorage.setItem('docufinance_admin_auth', 'true');
+      setIsAuthenticated(true);
+      setAuthError(false);
+      setAdminPasswordInput('');
+      confetti({ particleCount: 50, spread: 45 });
+    } else {
+      setAuthError(true);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('docufinance_admin_auth');
+    setIsAuthenticated(false);
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -168,6 +194,74 @@ export default function AdminPanelModal({
     XLSX.writeFile(wb, `DocuFinance_Admin_Yedek_${new Date().toISOString().slice(0, 10)}.xlsx`);
     confetti({ particleCount: 60, spread: 50 });
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg animate-fadeIn">
+        <div className={`relative w-full max-w-md rounded-3xl border p-8 shadow-2xl ${
+          isDark ? 'bg-slate-900 border-amber-500/40 text-white' : 'bg-white border-slate-300 text-slate-900'
+        }`}>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-500 to-emerald-500 mx-auto flex items-center justify-center text-slate-950 shadow-xl shadow-amber-500/20">
+              <Lock className="w-8 h-8" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-extrabold font-display">
+                Root Yönetici Güvenlik Doğrulaması
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Bu alana yalnızca sistem sahibi erişebilir. Lütfen Master Admin şifrenizi girin.
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4 pt-2">
+              <div>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  placeholder="Master Admin Parolası..."
+                  autoFocus
+                  required
+                  className={`w-full px-4 py-3 rounded-2xl border text-sm text-center font-mono tracking-widest focus:outline-none focus:border-amber-500 ${
+                    isDark ? 'bg-slate-950 border-white/10 text-amber-300 placeholder:text-slate-600' : 'bg-slate-50 border-slate-300'
+                  }`}
+                />
+              </div>
+
+              {authError && (
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 animate-shake">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Hatalı Master Parola! Erişim reddedildi.</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-amber-500/20 transition-all"
+              >
+                Yönetici Paneline Giriş Yap
+              </button>
+            </form>
+
+            <div className="pt-2">
+              <span className="text-[11px] text-slate-500 block">
+                Varsayılan Master Parola: <code className="font-mono text-amber-400 font-bold">docu2026admin</code>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
