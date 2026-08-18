@@ -238,37 +238,37 @@ export default function AuthModal({
           {activeTab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.emailLabel}</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ornek@sirket.com"
-                    required
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                      isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{t.emailLabel}</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@sirket.com"
+                  required
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.passwordLabel}</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                      isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{t.passwordLabel}</span>
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
               </div>
 
               <button

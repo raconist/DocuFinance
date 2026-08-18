@@ -373,6 +373,140 @@ Tarih       İşlem Tanımı                                Borç         Alacak
 Kapanış Bakiyesi: 197.000,00 TL`
   },
 
+  akbank: {
+    name: 'Akbank Ticari Kurumsal Hesap',
+    bank: 'Akbank',
+    region: 'TR',
+    currency: 'TRY',
+    text: `AKBANK T.A.Ş. - HESAP HAREKETLERİ EKSTRESİ
+Hesap No: 489-0194820 | Para Birimi: TRY
+Açılış Bakiyesi: 85.000,00 TL
+
+Tarih       Açıklama                                    Borç         Alacak       Bakiye
+02.08.2026  GELEN HAVALE - DİJİTAL REKLAM HİZMETLERİ                  45.000,00   130.000,00
+04.08.2026  OPET AKARYAKIT İSTASYONLARI A.Ş.            2.150,00                 127.850,00
+08.08.2026  GOOGLE CLOUD EMEA FATURA ÖDEMESİ            3.600,00                 124.250,00
+12.08.2026  YAZILIM DANIŞMANLIK HAKEDİŞ TAHSİLATI                     28.000,00   152.250,00
+15.08.2026  PERSONEL MAAŞ VE YOL ÜCRETİ ÖDEMELERİ      32.000,00                 120.250,00
+
+Kapanış Bakiyesi: 120.250,00 TL`
+  },
+
+  yapikredi: {
+    name: 'Yapı Kredi Ticari Cari Hesap',
+    bank: 'Yapı Kredi',
+    region: 'TR',
+    currency: 'TRY',
+    text: `YAPI VE KREDİ BANKASI A.Ş. EKSTRE
+Devreden Bakiye: 54.000,00 TL
+
+Tarih        Açıklama                                 Borç         Alacak       Bakiye
+01.08.2026   GELEN FAST - ETİCARET PAZARYERİ GELİRİ                38.500,00    92.500,00
+05.08.2026   TÜRK TELEKOM KURUMSAL FİBER İNTERNET       1.250,00                91.250,00
+09.08.2026   OFİS KİRASI VE STOPAJ BEDELİ              15.000,00                76.250,00
+14.08.2026   KURUMSAL LİSANS SATIŞ GELİRİ                          22.000,00    98.250,00
+
+Güncel Bakiye: 98.250,00 TL`
+  },
+
+  ziraat: {
+    name: 'Ziraat Bankası Kurumsal Hesap',
+    bank: 'Ziraat Bankası',
+    region: 'TR',
+    currency: 'TRY',
+    text: `T.C. ZİRAAT BANKASI A.Ş. HESAP EKSTRESİ
+Başlangıç Bakiyesi: 60.000,00 TL
+
+Tarih       İşlem Açıklaması                            Borç         Alacak       Bakiye
+03.08.2026  GELEN EFT - KAMU VE BELEDİYE HAKEDİŞİ                     55.000,00   115.000,00
+07.08.2026  VERGİ DAİRESİ KDV VE MUHTASAR ÖDEMESİ      18.400,00                  96.600,00
+11.08.2026  NOTER VE RESMİ HARÇ GİDERLERİ               1.800,00                  94.800,00
+15.08.2026  GELEN HAVALE - DANIŞMANLIK BEDELİ                         30.000,00   124.800,00
+
+Kapanış Bakiyesi: 124.800,00 TL`
+  },
+
+  enpara: {
+    name: 'Enpara.com Şirketim Hesabı',
+    bank: 'Enpara.com',
+    region: 'TR',
+    currency: 'TRY',
+    text: `ENPARA.COM ŞİRKETİM GÜNLÜK HAREKET DÖKÜMÜ
+Başlangıç Bakiyesi: 32.400,00 TL
+
+Tarih       Açıklama                                    Borç         Alacak       Bakiye
+02.08.2026  GELEN FAST - YAZILIM ENTEGRASYON BEDELİ                   16.500,00    48.900,00
+06.08.2026  FİGMA / GITHUB KURUMSAL ABONELİK GİDERİ     1.100,00                  47.800,00
+10.08.2026  YEMEK VE AĞIRLAMA GİDERİ                     680,00                  47.120,00
+14.08.2026  MÜŞAVİRLİK HİZMET BEDELİ TAHSİLATI                        12.000,00    59.120,00
+
+Kapanış Bakiyesi: 59.120,00 TL`
+  },
+
+  qnb: {
+    name: 'QNB Finansbank Ticari Ekstre',
+    bank: 'QNB Finansbank',
+    region: 'TR',
+    currency: 'TRY',
+    text: `QNB FİNANSBANK A.Ş. HESAP EKSTRESİ
+Devreden Bakiye: 40.000,00 TL
+
+Tarih       Açıklama                                    Borç         Alacak       Bakiye
+04.08.2026  GELEN EFT - İHRACAT DANIŞMANLIĞI                          42.000,00    82.000,00
+08.08.2026  OFİS ELEKTRİK VE DOĞALGAZ FATURASI          2.400,00                  79.600,00
+12.08.2026  YURT DIŞI ÖDEME ALTYAPISI TAHSİLATI                       25.000,00   104.600,00
+
+Kapanış Bakiyesi: 104.600,00 TL`
+  },
+
+  vakifbank: {
+    name: 'VakıfBank Kurumsal Ekstre',
+    bank: 'VakıfBank',
+    region: 'TR',
+    currency: 'TRY',
+    text: `TÜRKİYE VAKIFLAR BANKASI T.A.O. EKSTRE
+Başlangıç Bakiyesi: 50.000,00 TL
+
+Tarih       İşlem Açıklaması                            Borç         Alacak       Bakiye
+02.08.2026  GELEN EFT - PROJE GELİŞTİRME BEDELİ                       35.000,00    85.000,00
+06.08.2026  SGK VE PRİM ÖDEMESİ                        14.500,00                  70.500,00
+10.08.2026  DANIŞMANLIK HİZMETİ TAHSİLATI                             18.000,00    88.500,00
+
+Kapanış Bakiyesi: 88.500,00 TL`
+  },
+
+  denizbank: {
+    name: 'DenizBank Ticari Hesap',
+    bank: 'DenizBank',
+    region: 'TR',
+    currency: 'TRY',
+    text: `DENİZBANK A.Ş. HESAP EKSTRESİ
+Devreden Bakiye: 38.000,00 TL
+
+Tarih       Açıklama                                    Borç         Alacak       Bakiye
+03.08.2026  GELEN HAVALE - REKLAM PROJE BEDELİ                        26.000,00    64.000,00
+07.08.2026  AKARYAKIT VE NAKLİYE GİDERLERİ              1.950,00                  62.050,00
+11.08.2026  YAZILIM DESTEK ANLAŞMASI TAHSİLATI                        15.000,00    77.050,00
+
+Kapanış Bakiyesi: 77.050,00 TL`
+  },
+
+  kuveytturk: {
+    name: 'Kuveyt Türk Katılım Hesabı',
+    bank: 'Kuveyt Türk',
+    region: 'TR',
+    currency: 'TRY',
+    text: `KUVEYT TÜRK KATILIM BANKASI A.Ş. CARİ EKSTRE
+Açılış Bakiyesi: 45.000,00 TL
+
+Tarih       Açıklama                                    Borç         Alacak       Bakiye
+01.08.2026  GELEN FAST - MAL VE HİZMET SATIŞI                         30.000,00    75.000,00
+05.08.2026  KİRA VE AİDAT ÖDEMESİ                      10.000,00                  65.000,00
+09.08.2026  DİJİTAL AJANS HİZMET BEDELİ TAHSİLATI                     19.500,00    84.500,00
+
+Kapanış Bakiyesi: 84.500,00 TL`
+  },
+
   // --- 🇬🇧 UNITED KINGDOM (BRITISH BANKS) ---
   hsbc_uk: {
     name: 'HSBC UK Commercial Banking (GBP)',
