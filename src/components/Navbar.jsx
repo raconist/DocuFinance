@@ -85,7 +85,7 @@ export default function Navbar({
             title="Ana Sayfaya Dön"
           >
             <Home className="w-4 h-4 text-emerald-500" />
-            <span className="hidden sm:inline">{lang === 'tr' ? 'Ana Sayfa' : 'Home'}</span>
+            <span className="hidden sm:inline">{t.homeBtn}</span>
           </button>
 
           {/* Theme Toggle (Light / Dark) */}
@@ -166,7 +166,7 @@ export default function Navbar({
               }`}
             >
               <LogIn className="w-4 h-4 text-emerald-500" />
-              <span>Giriş Yap</span>
+              <span>{t.loginBtn}</span>
             </button>
           )}
 
