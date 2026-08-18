@@ -12,11 +12,15 @@ import {
   PlusCircle,
   Files,
   Sparkles,
-  Layers
+  Layers,
+  Camera,
+  FileCheck
 } from 'lucide-react';
 import { parseFinancialContent } from '../utils/parserEngine';
 import { generateDocumentHash } from '../utils/security';
 import { extractTextFromPdf } from '../utils/pdfExtractor';
+import { extractTextWithOcr } from '../utils/ocrEngine';
+import { isUBLInvoiceXML, parseUBLInvoiceXML } from '../utils/xmlInvoiceParser';
 import { applyRulesToTransactions } from '../utils/rulesEngine';
 import { detectDuplicates } from '../utils/duplicateDetector';
 import { TRANSLATIONS } from '../utils/i18n';
@@ -32,7 +36,7 @@ export default function FileUploadZone({
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
   const [pasteContent, setPasteContent] = useState('');
-  const [batchProgress, setBatchProgress] = useState(null); // { current: 1, total: 5, fileName: '' }
+  const [batchProgress, setBatchProgress] = useState(null); // { current: 1, total: 5, fileName: '', ocrPercent: null }
   const fileInputRef = useRef(null);
   
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
@@ -62,26 +66,47 @@ export default function FileUploadZone({
   };
 
   /**
-   * Helper to extract text from a single file (PDF or Text/CSV)
+   * Helper to extract text from a single file (PDF, Image with OCR, XML, or Text/CSV)
    */
   const extractFileText = async (file) => {
-    const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
-    
+    const fileNameLower = file.name.toLowerCase();
+    const isPdf = fileNameLower.endsWith('.pdf') || file.type === 'application/pdf';
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp|bmp)$/i.test(fileNameLower);
+    const isXml = fileNameLower.endsWith('.xml') || file.type === 'text/xml' || file.type === 'application/xml';
+
+    // 1. Image OCR extraction
+    if (isImage) {
+      const ocrText = await extractTextWithOcr(file, (percent) => {
+        setBatchProgress(prev => prev ? { ...prev, ocrPercent: percent } : null);
+      });
+      return { text: ocrText, isXmlInvoice: false };
+    }
+
+    // 2. PDF parsing (with scanned fallback)
     if (isPdf) {
       try {
         const { text } = await extractTextFromPdf(file);
-        return text;
+        if (text && text.trim().length > 30) {
+          return { text, isXmlInvoice: false };
+        }
       } catch (pdfErr) {
-        console.warn('PDF.js binary extraction failed, falling back to text reader:', pdfErr);
+        console.warn('PDF extraction fallback to OCR:', pdfErr);
       }
     }
 
-    return new Promise((resolve, reject) => {
+    // 3. Text / XML reader
+    const rawText = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (event) => resolve(event.target.result);
       reader.onerror = (err) => reject(err);
       reader.readAsText(file);
     });
+
+    if (isXml && isUBLInvoiceXML(rawText)) {
+      return { text: rawText, isXmlInvoice: true };
+    }
+
+    return { text: rawText, isXmlInvoice: false };
   };
 
   /**
@@ -91,7 +116,7 @@ export default function FileUploadZone({
     if (!files || files.length === 0) return;
 
     setIsProcessing(true);
-    setBatchProgress({ current: 0, total: files.length, fileName: files[0].name });
+    setBatchProgress({ current: 0, total: files.length, fileName: files[0].name, ocrPercent: null });
 
     try {
       const allParsedResults = [];
@@ -100,15 +125,21 @@ export default function FileUploadZone({
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setBatchProgress({ current: i + 1, total: files.length, fileName: file.name });
+        setBatchProgress({ current: i + 1, total: files.length, fileName: file.name, ocrPercent: null });
         fileNames.push(file.name);
 
-        const rawText = await extractFileText(file);
-        combinedRawText += `\n--- DOSYA: ${file.name} ---\n` + rawText;
+        const { text: fileText, isXmlInvoice } = await extractFileText(file);
+        combinedRawText += `\n--- DOSYA: ${file.name} ---\n` + fileText;
 
-        const parsed = parseFinancialContent(rawText);
-        parsed.sourceFileName = file.name;
-        allParsedResults.push(parsed);
+        if (isXmlInvoice) {
+          const parsedXml = parseUBLInvoiceXML(fileText, file.name);
+          parsedXml.sourceFileName = file.name;
+          allParsedResults.push(parsedXml);
+        } else {
+          const parsed = parseFinancialContent(fileText);
+          parsed.sourceFileName = file.name;
+          allParsedResults.push(parsed);
+        }
       }
 
       // Single file handling
@@ -116,7 +147,6 @@ export default function FileUploadZone({
         const singleResult = allParsedResults[0];
         const hash = await generateDocumentHash(combinedRawText);
 
-        // Apply Smart Accounting Rules
         const categorizedRows = applyRulesToTransactions(singleResult.rows || []);
         const { rows: auditedRows, duplicateCount } = detectDuplicates(categorizedRows);
 
@@ -160,7 +190,6 @@ export default function FileUploadZone({
         return parseDate(a.date) - parseDate(b.date);
       });
 
-      // Apply Smart Accounting Rules & Detect Duplicates across merged dataset
       const categorizedRows = applyRulesToTransactions(mergedRows);
       const { rows: auditedRows, duplicateCount } = detectDuplicates(categorizedRows);
 
@@ -177,7 +206,7 @@ export default function FileUploadZone({
 
       const batchMergedResult = {
         meta: {
-          bankName: `${primaryBankName} (Birleşik ${files.length} Ekstre)`,
+          bankName: `${primaryBankName} (Birleşik ${files.length} Belge)`,
           currency: primaryCurrency,
           transactionCount: auditedRows.length,
           startingBalance: startingBal,
@@ -243,8 +272,8 @@ export default function FileUploadZone({
   const handleStartBlank = () => {
     const blankData = {
       meta: {
-        bankName: lang === 'tr' ? 'Özel Finansal Tablo' : lang === 'de' ? 'Benutzerdefinierte Tabelle' : 'Custom Financial Ledger',
-        currency: lang === 'tr' ? 'TRY' : lang === 'de' ? 'EUR' : 'USD',
+        bankName: lang === 'tr' ? 'Özel Finansal Tablo' : 'Custom Financial Ledger',
+        currency: lang === 'tr' ? 'TRY' : 'USD',
         transactionCount: 1,
         startingBalance: 0,
         endingBalance: 0,
@@ -261,9 +290,9 @@ export default function FileUploadZone({
       rows: [
         {
           id: 'tx_init_1',
-          date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US'),
-          description: lang === 'tr' ? 'İlk Finansal Hareket' : lang === 'de' ? 'Erste Buchung' : 'Initial Transaction',
-          category: 'Genel',
+          date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US'),
+          description: lang === 'tr' ? 'İlk Finansal Hareket' : 'Initial Transaction',
+          category: 'Genel Giderler',
           accountCode: '770.01',
           debit: 0,
           credit: 0,
@@ -293,7 +322,7 @@ export default function FileUploadZone({
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            <span>{t.tabUpload} (Tek / Toplu)</span>
+            <span>{t.tabUpload} (PDF, XML, Görsel OCR)</span>
           </button>
 
           <button
@@ -319,7 +348,7 @@ export default function FileUploadZone({
           }`}
         >
           <PlusCircle className="w-4 h-4 group-hover:rotate-90 transition-transform text-emerald-500" />
-          <span>{lang === 'tr' ? 'Sıfırdan Boş Tablo Aç' : lang === 'de' ? 'Leere Tabelle Öffnen' : 'Open Blank Ledger'}</span>
+          <span>{lang === 'tr' ? 'Sıfırdan Boş Tablo Aç' : 'Open Blank Ledger'}</span>
         </button>
       </div>
 
@@ -343,7 +372,7 @@ export default function FileUploadZone({
             ref={fileInputRef}
             onChange={handleFileChange}
             multiple
-            accept=".pdf,.txt,.csv,.xml,.tsv,.json"
+            accept=".pdf,.txt,.csv,.xml,.tsv,.json,.png,.jpg,.jpeg,.webp"
             className="hidden"
           />
 
@@ -353,7 +382,9 @@ export default function FileUploadZone({
               <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>
                 {batchProgress && batchProgress.total > 1
                   ? `Toplu Ekstre Ayrıştırılıyor (${batchProgress.current}/${batchProgress.total})...`
-                  : t.processingTitle}
+                  : batchProgress?.ocrPercent !== null && batchProgress?.ocrPercent !== undefined
+                    ? `Görselden Metin Okunuyor (OCR %${batchProgress.ocrPercent})...`
+                    : t.processingTitle}
               </p>
               {batchProgress && (
                 <p className="text-xs text-emerald-400 font-mono mt-1 max-w-sm truncate">
@@ -361,7 +392,7 @@ export default function FileUploadZone({
                 </p>
               )}
               <p className="text-xs text-slate-400 mt-2">
-                Sayfalar ve tablolar sıfır sunucu güvenliğiyle işleniyor
+                Sıfır sunucu güvenliğiyle tarayıcınızda işleniyor
               </p>
             </div>
           ) : (
@@ -378,13 +409,13 @@ export default function FileUploadZone({
                 <h3 className={`text-xl sm:text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-950'}`}>
                   {t.dropTitle}
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Çoklu / Toplu Destekli
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  PDF • XML • OCR Destekli
                 </span>
               </div>
 
               <p className={`text-xs sm:text-sm mb-5 max-w-lg ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                12 aylık PDF ekstrelerinizi veya farklı banka çıktılarınızı tek seferde bırakın. Sistem kronolojik olarak birleştirir ve hesap kodlarını otomatik atar.
+                PDF Banka Ekstreleri, GİB e-Fatura XML veya taranmış dekont fotoğraflarınızı tek seferde bırakın. Kronolojik birleştirip TDHP muhasebe kodlarını otomatik atar.
               </p>
 
               {/* Feature Highlights Pills */}
@@ -393,21 +424,28 @@ export default function FileUploadZone({
                   isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
                 }`}>
                   <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                  Toplu PDF Birleştirme
+                  Toplu 12 Aylık PDF
                 </span>
 
                 <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
                   isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
                 }`}>
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  Otomatik TDHP Kodu (770/600)
+                  <FileCheck className="w-3.5 h-3.5 text-blue-400" />
+                  GİB e-Fatura UBL-XML
                 </span>
 
                 <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
                   isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
                 }`}>
-                  <Lock className="w-3.5 h-3.5 text-blue-400" />
-                  Zero-Knowledge Güvenlik
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  Tarayıcı İçi OCR
+                </span>
+
+                <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
+                  isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
+                  <Lock className="w-3.5 h-3.5 text-purple-400" />
+                  Zero-Knowledge
                 </span>
               </div>
 

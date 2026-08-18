@@ -29,7 +29,11 @@ import {
   BookOpen,
   CheckSquare,
   Square,
-  ChevronDown
+  ChevronDown,
+  Scale,
+  FileCheck2,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import { formatCurrency, parseFinancialNumber } from '../utils/parserEngine';
 import { maskSensitiveData } from '../utils/security';
@@ -38,6 +42,8 @@ import { applyRulesToTransactions } from '../utils/rulesEngine';
 import { detectDuplicates, removeDuplicateRows } from '../utils/duplicateDetector';
 import ExportModal from './ExportModal';
 import RulesModal from './RulesModal';
+import ReconciliationModal from './ReconciliationModal';
+import AuditCertificateModal from './AuditCertificateModal';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
 
@@ -54,15 +60,18 @@ export default function DataStudio({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSourceFile, setSelectedSourceFile] = useState('ALL');
-  const [sortField, setSortField] = useState('date'); // 'date' | 'amount' | 'balance' | 'description' | 'accountCode'
-  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+  const [sortField, setSortField] = useState('date');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [customCurrency, setCustomCurrency] = useState(parsedData.meta?.currency || 'TRY');
   const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(true);
   const [exportSuccessMsg, setExportSuccessMsg] = useState(null);
+  const [activeViewMode, setActiveViewMode] = useState('table'); // 'table' | 'analytics'
   
   // Modals State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [isReconciliationOpen, setIsReconciliationOpen] = useState(false);
+  const [isAuditCertificateOpen, setIsAuditCertificateOpen] = useState(false);
 
   // Row Selection for Bulk Actions
   const [selectedRowIds, setSelectedRowIds] = useState(new Set());
@@ -91,18 +100,31 @@ export default function DataStudio({
     let totalDebit = 0;
     let totalCredit = 0;
     const categoryTotals = {};
+    const monthlyTotals = {};
 
     rows.forEach(r => {
       totalDebit += (r.debit || 0);
       totalCredit += (r.credit || 0);
 
-      const cat = r.category || 'Genel';
+      const cat = r.category || 'Genel Giderler';
       if (!categoryTotals[cat]) {
-        categoryTotals[cat] = { debit: 0, credit: 0, count: 0 };
+        categoryTotals[cat] = { debit: 0, credit: 0, count: 0, code: r.accountCode || '' };
       }
       categoryTotals[cat].debit += (r.debit || 0);
       categoryTotals[cat].credit += (r.credit || 0);
       categoryTotals[cat].count += 1;
+
+      // Month grouping (MM/YYYY)
+      const dateParts = (r.date || '').split(/[.\-/]/);
+      let monthKey = 'Genel';
+      if (dateParts.length >= 3) {
+        monthKey = dateParts[1] ? `${dateParts[1]}/${dateParts[2] || dateParts[0]}` : 'Dönem';
+      }
+      if (!monthlyTotals[monthKey]) {
+        monthlyTotals[monthKey] = { debit: 0, credit: 0 };
+      }
+      monthlyTotals[monthKey].debit += (r.debit || 0);
+      monthlyTotals[monthKey].credit += (r.credit || 0);
     });
 
     const startingBalance = data.meta?.startingBalance || 0;
@@ -111,7 +133,6 @@ export default function DataStudio({
     const discrepancy = Math.abs(calculatedEnding - officialEnding);
     const isReconciled = discrepancy < 0.05;
 
-    // Check duplicate count
     const dupCount = rows.filter(r => r.isDuplicate).length;
 
     return {
@@ -125,6 +146,7 @@ export default function DataStudio({
       discrepancy,
       isReconciled,
       categoryTotals,
+      monthlyTotals,
       currency: customCurrency,
       bankName: data.meta?.bankName || 'Banka Ekstresi',
       isBatch: Boolean(data.meta?.isBatch),
@@ -192,7 +214,7 @@ export default function DataStudio({
   const handleAddRow = () => {
     const newRow = {
       id: 'tx_custom_' + Date.now(),
-      date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US'),
+      date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US'),
       description: 'Yeni Finansal Hareket',
       category: 'Genel Giderler',
       accountCode: '770.01',
@@ -216,7 +238,6 @@ export default function DataStudio({
     });
   };
 
-  // Remove duplicates action
   const handleCleanDuplicates = () => {
     const cleaned = removeDuplicateRows(data.rows || []);
     setData({
@@ -227,7 +248,6 @@ export default function DataStudio({
     setTimeout(() => setExportSuccessMsg(null), 3500);
   };
 
-  // Apply Rules from RulesModal
   const handleApplyRules = (customRules) => {
     const updated = applyRulesToTransactions(data.rows || [], customRules);
     setData({
@@ -236,7 +256,6 @@ export default function DataStudio({
     });
   };
 
-  // Row Selection Handlers
   const handleToggleSelectAll = () => {
     if (selectedRowIds.size === filteredAndSortedRows.length) {
       setSelectedRowIds(new Set());
@@ -265,14 +284,9 @@ export default function DataStudio({
     }
   };
 
-  // Quick 1-Click Excel Export
   const handleQuickExportExcel = () => {
     try {
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.8 }
-      });
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
     } catch (e) {}
 
     exportToExcel(data, {
@@ -286,14 +300,10 @@ export default function DataStudio({
     setTimeout(() => setExportSuccessMsg(null), 4000);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
       
-      {/* Top Breadcrumb & Controls */}
+      {/* Top Breadcrumb & Super Tools */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onReset}
@@ -307,15 +317,35 @@ export default function DataStudio({
           <span>{lang === 'tr' ? '← Ana Sayfaya Dön & Yeni Dosya' : '← Back to Home'}</span>
         </button>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           
+          {/* Cross Reconciliation Tool */}
+          <button
+            onClick={() => setIsReconciliationOpen(true)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+              isDark ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/40' : 'bg-cyan-50 border-cyan-300 text-cyan-800'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-cyan-400" />
+            <span>Çapraz Mutabakat (Mizan Eşle)</span>
+          </button>
+
+          {/* Audit Certificate Modal */}
+          <button
+            onClick={() => setIsAuditCertificateOpen(true)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+              isDark ? 'bg-purple-950/40 border-purple-500/40 text-purple-300 hover:bg-purple-900/40' : 'bg-purple-50 border-purple-300 text-purple-800'
+            }`}
+          >
+            <FileCheck2 className="w-4 h-4 text-purple-400" />
+            <span>Resmi Onay Belgesi (PDF)</span>
+          </button>
+
           {/* Smart Rules Button */}
           <button
             onClick={() => setIsRulesModalOpen(true)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
-              isDark 
-                ? 'bg-slate-900 hover:bg-slate-800 border-amber-500/40 text-amber-300' 
-                : 'bg-white hover:bg-amber-50/60 border-amber-300 text-amber-700'
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+              isDark ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/40' : 'bg-amber-50 border-amber-300 text-amber-800'
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
@@ -361,7 +391,7 @@ export default function DataStudio({
                 </h2>
                 {stats.isBatch && (
                   <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {stats.batchFileCount} Dosya Birleşik
+                    {stats.batchFileCount} Belge Birleşik
                   </span>
                 )}
               </div>
@@ -375,7 +405,6 @@ export default function DataStudio({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           
-          {/* Mask Sensitive Data Toggle */}
           <button
             onClick={() => setIsMasked(!isMasked)}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
@@ -389,20 +418,6 @@ export default function DataStudio({
           >
             {isMasked ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
             <span className="hidden sm:inline">{isMasked ? t.hiddenPii : t.hidePii}</span>
-          </button>
-
-          {/* Print */}
-          <button
-            onClick={handlePrint}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
-              isDark 
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-white/10' 
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-            }`}
-            title="Yazdır / PDF Olarak Kaydet"
-          >
-            <Printer className="w-4 h-4" />
-            <span className="hidden md:inline">Yazdır</span>
           </button>
 
           {/* Quick Excel Download */}
@@ -424,7 +439,7 @@ export default function DataStudio({
             className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs sm:text-sm font-extrabold text-slate-950 shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Download className="w-4 h-4 stroke-[2.5]" />
-            <span>Dışa Aktarma & Muhasebe (Luca/Zirve/QBO)</span>
+            <span>Dışa Aktarma (Luca/Zirve/Logo/QBO)</span>
             <ChevronDown className="w-3.5 h-3.5 opacity-70" />
           </button>
 
@@ -454,7 +469,7 @@ export default function DataStudio({
       {exportSuccessMsg && (
         <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs sm:text-sm font-medium flex items-center justify-between animate-fadeIn">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <span>{exportSuccessMsg}</span>
           </div>
           <span className="text-xs text-emerald-400 font-mono">OK</span>
@@ -529,7 +544,7 @@ export default function DataStudio({
         </div>
       </div>
 
-      {/* Visual Category Breakdown Bar */}
+      {/* Visual Category & Analytics View */}
       {showCategoryBreakdown && Object.keys(stats.categoryTotals).length > 0 && (
         <div className={`p-5 rounded-3xl border space-y-3 ${
           isDark ? 'bg-slate-900/70 border-white/10' : 'bg-white border-slate-200 shadow-sm'
@@ -538,7 +553,7 @@ export default function DataStudio({
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-emerald-500" />
               <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {t.categoryBreakdownTitle}
+                Harcama ve Gelir Kategori Analizi
               </h3>
             </div>
             <button
@@ -556,7 +571,9 @@ export default function DataStudio({
               }`}>
                 <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                   <span className="truncate">{catName}</span>
-                  <span className="font-mono text-[11px]">{catData.count}</span>
+                  <span className="font-mono text-[11px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">
+                    {catData.code || catData.count}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-xs font-mono font-bold">
                   {catData.debit > 0 && <span className="text-rose-500">-{formatCurrency(catData.debit, stats.currency)}</span>}
@@ -570,8 +587,6 @@ export default function DataStudio({
 
       {/* Grid Controls & Bulk Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
-        
-        {/* Search & Filters */}
         <div className="flex flex-wrap items-center gap-3">
           
           <div className="relative flex-1 sm:w-64">
@@ -602,7 +617,6 @@ export default function DataStudio({
             </select>
           )}
 
-          {/* Batch File Filter if Multi-File */}
           {stats.isBatch && stats.batchFileNames.length > 1 && (
             <select
               value={selectedSourceFile}
@@ -611,14 +625,13 @@ export default function DataStudio({
                 isDark ? 'bg-slate-900 border-white/10 text-emerald-400' : 'bg-white border-slate-200 text-emerald-700'
               }`}
             >
-              <option value="ALL">Tüm Dosyalar ({stats.batchFileNames.length})</option>
+              <option value="ALL">Tüm Belgeler ({stats.batchFileNames.length})</option>
               {stats.batchFileNames.map(fName => (
                 <option key={fName} value={fName}>{fName}</option>
               ))}
             </select>
           )}
 
-          {/* Bulk Selection Actions */}
           {selectedRowIds.size > 0 && (
             <div className="flex items-center gap-2 animate-fadeIn">
               <span className="text-xs font-bold text-emerald-400 font-mono">
@@ -635,7 +648,6 @@ export default function DataStudio({
 
         </div>
 
-        {/* Add Row Button */}
         <button
           onClick={handleAddRow}
           className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all hover:scale-[1.01] ${
@@ -649,7 +661,7 @@ export default function DataStudio({
         </button>
       </div>
 
-      {/* Spreadsheet Data Table with Column Sorting & TDHP Account Code */}
+      {/* Spreadsheet Data Table */}
       <div className="data-table-container shadow-2xl max-h-[560px] overflow-y-auto">
         <table className="data-table">
           <thead>
@@ -860,6 +872,25 @@ export default function DataStudio({
         isOpen={isRulesModalOpen}
         onClose={() => setIsRulesModalOpen(false)}
         onApplyRules={handleApplyRules}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* 2-File Cross-Reconciliation Modal */}
+      <ReconciliationModal
+        isOpen={isReconciliationOpen}
+        onClose={() => setIsReconciliationOpen(false)}
+        bankData={data}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* Official Balance Audit Certificate Modal */}
+      <AuditCertificateModal
+        isOpen={isAuditCertificateOpen}
+        onClose={() => setIsAuditCertificateOpen(false)}
+        data={data}
+        currency={stats.currency}
         theme={theme}
         lang={lang}
       />
