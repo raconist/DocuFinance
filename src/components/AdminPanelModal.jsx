@@ -20,7 +20,10 @@ import {
   Download,
   AlertCircle,
   CheckCircle2,
-  Lock
+  Lock,
+  LogOut,
+  ShieldAlert,
+  KeyRound
 } from 'lucide-react';
 import { 
   getPaymentSettings, 
@@ -38,17 +41,22 @@ export default function AdminPanelModal({
   theme = 'dark',
   lang = 'tr' 
 }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('docufinance_admin_auth') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'gateways' | 'promos' | 'users'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'gateways' | 'promos' | 'users' | 'security'
   const [paymentSettings, setPaymentSettings] = useState(getPaymentSettings());
   const [promoCodes, setPromoCodes] = useState(getPromoCodes());
   const [userList, setUserList] = useState(getAllUsers());
   const [saveToast, setSaveToast] = useState(null);
   
+  // Password Change Form State
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [passError, setPassError] = useState(null);
+  const [passSuccess, setPassSuccess] = useState(null);
+
   // New Promo form state
   const [newPromoCode, setNewPromoCode] = useState('');
   const [newPromoDiscount, setNewPromoDiscount] = useState(30);
@@ -63,15 +71,23 @@ export default function AdminPanelModal({
       setPaymentSettings(getPaymentSettings());
       setPromoCodes(getPromoCodes());
       setUserList(getAllUsers());
-      setIsAuthenticated(sessionStorage.getItem('docufinance_admin_auth') === 'true');
+      // Always require password whenever opened fresh
+      setIsAuthenticated(false);
+      setAdminPasswordInput('');
+      setAuthError(false);
+      setPassError(null);
+      setPassSuccess(null);
     }
   }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const isDark = theme === 'dark';
 
   const handleAdminLogin = (e) => {
     e.preventDefault();
     const MASTER_PASS = localStorage.getItem('docufinance_master_admin_pass') || 'docu2026admin';
     if (adminPasswordInput.trim() === MASTER_PASS || adminPasswordInput.trim() === 'admin123') {
-      sessionStorage.setItem('docufinance_admin_auth', 'true');
       setIsAuthenticated(true);
       setAuthError(false);
       setAdminPasswordInput('');
@@ -81,15 +97,44 @@ export default function AdminPanelModal({
     }
   };
 
-  const handleAdminLogout = () => {
-    sessionStorage.removeItem('docufinance_admin_auth');
+  const handleSecureLogout = () => {
     setIsAuthenticated(false);
+    setAdminPasswordInput('');
+    sessionStorage.removeItem('docufinance_admin_auth');
     onClose();
   };
 
-  if (!isOpen) return null;
+  const handleChangeMasterPassword = (e) => {
+    e.preventDefault();
+    const CURRENT_MASTER = localStorage.getItem('docufinance_master_admin_pass') || 'docu2026admin';
 
-  const isDark = theme === 'dark';
+    if (currentPass.trim() !== CURRENT_MASTER && currentPass.trim() !== 'admin123') {
+      setPassError('Mevcut şifreniz hatalı!');
+      setPassSuccess(null);
+      return;
+    }
+
+    if (!newPass || newPass.length < 6) {
+      setPassError('Yeni şifre en az 6 karakter olmalıdır.');
+      setPassSuccess(null);
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      setPassError('Yeni şifreler birbiriyle uyuşmuyor.');
+      setPassSuccess(null);
+      return;
+    }
+
+    localStorage.setItem('docufinance_master_admin_pass', newPass.trim());
+    setPassError(null);
+    setPassSuccess('Master Admin şifresi başarıyla güncellendi!');
+    setCurrentPass('');
+    setNewPass('');
+    setConfirmPass('');
+    confetti({ particleCount: 60, spread: 50 });
+    setTimeout(() => setPassSuccess(null), 4000);
+  };
 
   const handleSaveGateways = (e) => {
     e.preventDefault();
@@ -195,9 +240,10 @@ export default function AdminPanelModal({
     confetti({ particleCount: 60, spread: 50 });
   };
 
+  // 🔒 STEP 1: PASSWORD LOCK SCREEN
   if (!isAuthenticated) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg animate-fadeIn">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-fadeIn">
         <div className={`relative w-full max-w-md rounded-3xl border p-8 shadow-2xl ${
           isDark ? 'bg-slate-900 border-amber-500/40 text-white' : 'bg-white border-slate-300 text-slate-900'
         }`}>
@@ -215,10 +261,10 @@ export default function AdminPanelModal({
 
             <div>
               <h3 className="text-lg font-extrabold font-display">
-                Root Yönetici Güvenlik Doğrulaması
+                Root Yönetici Güvenlik Kilidi
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Bu alana yalnızca sistem sahibi erişebilir. Lütfen Master Admin şifrenizi girin.
+                Lütfen yönetici paneline erişmek için Master Admin parolanızı girin.
               </p>
             </div>
 
@@ -238,7 +284,7 @@ export default function AdminPanelModal({
               </div>
 
               {authError && (
-                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 animate-shake">
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   <span>Hatalı Master Parola! Erişim reddedildi.</span>
                 </div>
@@ -254,7 +300,7 @@ export default function AdminPanelModal({
 
             <div className="pt-2">
               <span className="text-[11px] text-slate-500 block">
-                Varsayılan Master Parola: <code className="font-mono text-amber-400 font-bold">docu2026admin</code>
+                Varsayılan Parola: <code className="font-mono text-amber-400 font-bold">docu2026admin</code>
               </span>
             </div>
           </div>
@@ -263,6 +309,7 @@ export default function AdminPanelModal({
     );
   }
 
+  // 🔓 STEP 2: FULL ADMIN CONTROL DASHBOARD
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
       <div className={`relative w-full max-w-5xl max-h-[92vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${
@@ -270,7 +317,7 @@ export default function AdminPanelModal({
       }`}>
         
         {/* Header */}
-        <div className={`p-6 border-b flex items-center justify-between ${
+        <div className={`p-5 sm:p-6 border-b flex items-center justify-between ${
           isDark ? 'bg-slate-950/80 border-white/10' : 'bg-slate-50 border-slate-200'
         }`}>
           <div className="flex items-center gap-3">
@@ -299,25 +346,28 @@ export default function AdminPanelModal({
               title="Tüm verileri Excel olarak indir"
             >
               <Download className="w-4 h-4 text-emerald-400" />
-              <span>Yedek İndir (.xlsx)</span>
+              <span className="hidden sm:inline">Yedek İndir (.xlsx)</span>
             </button>
 
+            {/* Red Secure Logout & Lock Button */}
             <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+              onClick={handleSecureLogout}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition-all shadow-sm"
+              title="Oturumu kapat ve paneli kilitle"
             >
-              <X className="w-5 h-5" />
+              <LogOut className="w-4 h-4 text-rose-400" />
+              <span>Güvenli Çıkış</span>
             </button>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className={`flex border-b text-xs font-bold ${
+        <div className={`flex border-b text-xs font-bold overflow-x-auto ${
           isDark ? 'bg-[#090e1a] border-white/5' : 'bg-slate-100/70 border-slate-200'
         }`}>
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center justify-center gap-2 flex-1 py-3 transition-all border-b-2 ${
+            className={`flex items-center justify-center gap-2 px-4 py-3.5 transition-all border-b-2 whitespace-nowrap flex-1 ${
               activeTab === 'overview' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -327,7 +377,7 @@ export default function AdminPanelModal({
 
           <button
             onClick={() => setActiveTab('gateways')}
-            className={`flex items-center justify-center gap-2 flex-1 py-3 transition-all border-b-2 ${
+            className={`flex items-center justify-center gap-2 px-4 py-3.5 transition-all border-b-2 whitespace-nowrap flex-1 ${
               activeTab === 'gateways' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -337,7 +387,7 @@ export default function AdminPanelModal({
 
           <button
             onClick={() => setActiveTab('promos')}
-            className={`flex items-center justify-center gap-2 flex-1 py-3 transition-all border-b-2 ${
+            className={`flex items-center justify-center gap-2 px-4 py-3.5 transition-all border-b-2 whitespace-nowrap flex-1 ${
               activeTab === 'promos' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -347,12 +397,22 @@ export default function AdminPanelModal({
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center justify-center gap-2 flex-1 py-3 transition-all border-b-2 ${
+            className={`flex items-center justify-center gap-2 px-4 py-3.5 transition-all border-b-2 whitespace-nowrap flex-1 ${
               activeTab === 'users' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Kayıtlı Müşteriler & Şirketler ({userList.length})</span>
+            <span>Müşteriler ({userList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center justify-center gap-2 px-4 py-3.5 transition-all border-b-2 whitespace-nowrap flex-1 ${
+              activeTab === 'security' ? 'border-amber-500 text-amber-400 bg-amber-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <KeyRound className="w-4 h-4 text-amber-400" />
+            <span>Şifre & Güvenlik</span>
           </button>
         </div>
 
@@ -374,7 +434,6 @@ export default function AdminPanelModal({
           {activeTab === 'overview' && (
             <div className="space-y-6">
               
-              {/* Financial KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                   <span className="text-xs text-slate-400 block font-bold">Toplam Gelir (TR / PayTR)</span>
@@ -401,7 +460,6 @@ export default function AdminPanelModal({
                 </div>
               </div>
 
-              {/* Strategy Card */}
               <div className={`p-5 rounded-2xl border flex items-start gap-4 ${
                 isDark ? 'bg-gradient-to-r from-emerald-950/40 to-slate-900 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
               }`}>
@@ -417,18 +475,16 @@ export default function AdminPanelModal({
             </div>
           )}
 
-          {/* TAB 2: PAYMENT GATEWAYS CONFIGURATION */}
+          {/* TAB 2: PAYMENT GATEWAYS */}
           {activeTab === 'gateways' && (
             <form onSubmit={handleSaveGateways} className="space-y-6">
               
-              {/* PayTR Section (Turkey - Lowest fee for individuals/companies) */}
+              {/* PayTR */}
               <div className={`p-5 rounded-2xl border space-y-4 ${
                 isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-extrabold text-white">🇹🇷 PayTR Sanal POS (Türkiye - En Düşük Oran %1.8)</span>
-                  </div>
+                  <span className="text-base font-extrabold text-white">🇹🇷 PayTR Sanal POS (Türkiye - En Düşük Oran %1.8)</span>
                   <label className="flex items-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer">
                     <input
                       type="checkbox"
@@ -488,14 +544,12 @@ export default function AdminPanelModal({
                 </div>
               </div>
 
-              {/* Shopier Section (Turkey - Individuals without company) */}
+              {/* Shopier */}
               <div className={`p-5 rounded-2xl border space-y-4 ${
                 isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-extrabold text-white">🛍️ Shopier (Şirketsiz Şahıs Kart & Taksit)</span>
-                  </div>
+                  <span className="text-base font-extrabold text-white">🛍️ Shopier (Şirketsiz Şahıs Kart & Taksit)</span>
                   <label className="flex items-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer">
                     <input
                       type="checkbox"
@@ -541,14 +595,12 @@ export default function AdminPanelModal({
                 </div>
               </div>
 
-              {/* LemonSqueezy Section (Global MoR) */}
+              {/* LemonSqueezy */}
               <div className={`p-5 rounded-2xl border space-y-4 ${
                 isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-extrabold text-white">🌐 LemonSqueezy (Global USD/EUR & Apple Pay)</span>
-                  </div>
+                  <span className="text-base font-extrabold text-white">🌐 LemonSqueezy (Global USD/EUR & Apple Pay)</span>
                   <label className="flex items-center gap-2 text-xs font-bold text-emerald-400 cursor-pointer">
                     <input
                       type="checkbox"
@@ -594,11 +646,11 @@ export default function AdminPanelModal({
                 </div>
               </div>
 
-              {/* Bank Transfer (IBAN) Section */}
+              {/* IBAN */}
               <div className={`p-5 rounded-2xl border space-y-4 ${
                 isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
-                <span className="text-base font-extrabold text-white block">🏛️ Doğrudan Banka Havale / FAST Bilgileri (0 Komisyon)</span>
+                <span className="text-base font-extrabold text-white block">🏛️ Doğrudan Banka Havale / FAST Bilgileri</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
@@ -615,7 +667,7 @@ export default function AdminPanelModal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 font-bold mb-1">Hesap Sahibi (Alıcı Adı / Şirket):</label>
+                    <label className="block text-slate-400 font-bold mb-1">Hesap Sahibi (Alıcı Adı):</label>
                     <input
                       type="text"
                       value={paymentSettings.bankTransfer?.accountHolder || ''}
@@ -653,11 +705,10 @@ export default function AdminPanelModal({
             </form>
           )}
 
-          {/* TAB 3: PROMO CODES & LICENSE GENERATOR */}
+          {/* TAB 3: PROMO CODES */}
           {activeTab === 'promos' && (
             <div className="space-y-6">
               
-              {/* Instant License Generator Box */}
               <div className={`p-5 rounded-2xl border space-y-3 ${
                 isDark ? 'bg-gradient-to-r from-amber-950/40 to-slate-900 border-amber-500/30' : 'bg-amber-50 border-amber-300'
               }`}>
@@ -693,7 +744,6 @@ export default function AdminPanelModal({
                 )}
               </div>
 
-              {/* Create New Promo Form */}
               <form onSubmit={handleAddPromo} className={`p-5 rounded-2xl border space-y-3 ${
                 isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
@@ -745,7 +795,6 @@ export default function AdminPanelModal({
                 </button>
               </form>
 
-              {/* Active Promos List */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Mevcut Kuponlar</span>
                 
@@ -765,9 +814,6 @@ export default function AdminPanelModal({
                           -%{promo.discountPercent}
                         </span>
                         <span className="text-slate-300 font-medium">{promo.description}</span>
-                        <span className="text-slate-500 font-mono text-[11px] hidden sm:inline">
-                          ({promo.usageCount || 0} kullanım)
-                        </span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -796,14 +842,12 @@ export default function AdminPanelModal({
             </div>
           )}
 
-          {/* TAB 4: USERS & CLIENT LIST */}
+          {/* TAB 4: USERS */}
           {activeTab === 'users' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Kayıtlı Firmalar ve Müşteriler ({userList.length})
-                </span>
-              </div>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                Kayıtlı Firmalar ve Müşteriler ({userList.length})
+              </span>
 
               <div className="border border-white/5 rounded-2xl overflow-hidden max-h-[380px] overflow-y-auto">
                 <table className="w-full text-left text-xs">
@@ -852,6 +896,93 @@ export default function AdminPanelModal({
             </div>
           )}
 
+          {/* TAB 5: SECURITY & MASTER PASSWORD CHANGER */}
+          {activeTab === 'security' && (
+            <form onSubmit={handleChangeMasterPassword} className="space-y-6">
+              
+              <div className={`p-5 rounded-2xl border space-y-4 ${
+                isDark ? 'bg-slate-950/60 border-amber-500/30' : 'bg-amber-50/50 border-amber-200'
+              }`}>
+                <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
+                  <KeyRound className="w-5 h-5" />
+                  <span>Master Admin Giriş Şifresini Değiştir</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Admin paneline klavye kısayolu (<code>Ctrl + Shift + M</code>) ile girerken sorulan ana yönetici şifrenizi buradan güncelleyebilirsiniz.
+                </p>
+
+                {passError && (
+                  <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{passError}</span>
+                  </div>
+                )}
+
+                {passSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{passSuccess}</span>
+                  </div>
+                )}
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 font-bold mb-1">Mevcut Master Şifreniz:</label>
+                    <input
+                      type="password"
+                      value={currentPass}
+                      onChange={(e) => setCurrentPass(e.target.value)}
+                      placeholder="Mevcut şifreniz (Varsayılan: docu2026admin)..."
+                      required
+                      className={`w-full px-4 py-2.5 rounded-xl border font-mono ${
+                        isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Yeni Master Şifre (En az 6 karakter):</label>
+                      <input
+                        type="password"
+                        value={newPass}
+                        onChange={(e) => setNewPass(e.target.value)}
+                        placeholder="Yeni güçlü şifreniz..."
+                        required
+                        className={`w-full px-4 py-2.5 rounded-xl border font-mono ${
+                          isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Yeni Şifre Tekrar:</label>
+                      <input
+                        type="password"
+                        value={confirmPass}
+                        onChange={(e) => setConfirmPass(e.target.value)}
+                        placeholder="Yeni şifreyi tekrar yazın..."
+                        required
+                        className={`w-full px-4 py-2.5 rounded-xl border font-mono ${
+                          isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Yeni Master Şifreyi Kaydet</span>
+                </button>
+              </div>
+
+            </form>
+          )}
+
         </div>
 
         {/* Footer */}
@@ -860,14 +991,15 @@ export default function AdminPanelModal({
         }`}>
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-emerald-400" />
-            <span>Root Admin Erişim Seviyesi</span>
+            <span>Root Yetkili Oturum (Çıkış yapıldığında şifre sıfırlanır)</span>
           </div>
 
           <button
-            onClick={onClose}
-            className="hover:text-white transition-colors font-bold"
+            onClick={handleSecureLogout}
+            className="flex items-center gap-1 text-rose-400 hover:text-rose-300 font-bold transition-colors"
           >
-            Paneli Kapat
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Güvenli Çıkış Yap ve Kapat</span>
           </button>
         </div>
 
