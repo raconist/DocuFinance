@@ -47,17 +47,10 @@ export default function App() {
     }
   }, [theme]);
 
-  // Secret Admin Access via URL (?admin=true, #admin) or Keyboard (Ctrl + Shift + A)
+  // Secret Admin Access STRICTLY via Keyboard (Ctrl + Shift + R / Cmd + Shift + R)
   useEffect(() => {
-    // Check URL parameters
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === 'true' || params.get('admin') === '1' || window.location.hash === '#admin') {
-      setIsAdminOpen(true);
-    }
-
-    // Secret Keybind: Ctrl + Shift + A (or Cmd + Shift + A)
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
         e.preventDefault();
         setIsAdminOpen(prev => !prev);
       }

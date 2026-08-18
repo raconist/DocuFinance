@@ -57,18 +57,11 @@ export default function Navbar({
               <span className={`font-display text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
                 DocuFinance<span className="text-emerald-500">.ai</span>
               </span>
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenAdmin();
-                }}
-                className={`px-2 py-0.5 text-[11px] font-bold rounded-full border cursor-pointer hover:scale-105 transition-transform ${
-                  isDark 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                }`}
-                title="Yönetici Girişi (Gizli)"
-              >
+              <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full border ${
+                isDark 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
                 v2.8 Pro
               </span>
             </div>
