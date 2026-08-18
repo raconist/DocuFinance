@@ -10,6 +10,7 @@ import AuthModal from './components/AuthModal';
 import AccountDashboardModal from './components/AccountDashboardModal';
 import AdminPanelModal from './components/AdminPanelModal';
 import ProgrammaticSeoDirectory from './components/ProgrammaticSeoDirectory';
+import SupportWidget from './components/SupportWidget';
 import { SAMPLE_STATEMENTS, parseFinancialContent } from './utils/parserEngine';
 import { generateDocumentHash } from './utils/security';
 import { saveStatementToLocalDB } from './utils/dbStorage';
@@ -360,6 +361,9 @@ export default function App() {
         theme={theme}
         lang={lang}
       />
+
+      {/* Floating 24/7 WhatsApp & Live Support Widget */}
+      <SupportWidget theme={theme} lang={lang} />
 
     </div>
   );
