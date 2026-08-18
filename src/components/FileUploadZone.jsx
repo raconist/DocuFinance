@@ -1,14 +1,40 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, FileCode, CheckCircle2, Lock, ShieldCheck, AlertCircle, ArrowUpRight, ClipboardPaste, PlusCircle } from 'lucide-react';
+import { 
+  UploadCloud, 
+  FileText, 
+  FileCode, 
+  CheckCircle2, 
+  Lock, 
+  ShieldCheck, 
+  AlertCircle, 
+  ArrowUpRight, 
+  ClipboardPaste, 
+  PlusCircle,
+  Files,
+  Sparkles,
+  Layers
+} from 'lucide-react';
 import { parseFinancialContent } from '../utils/parserEngine';
 import { generateDocumentHash } from '../utils/security';
+import { extractTextFromPdf } from '../utils/pdfExtractor';
+import { applyRulesToTransactions } from '../utils/rulesEngine';
+import { detectDuplicates } from '../utils/duplicateDetector';
 import { TRANSLATIONS } from '../utils/i18n';
 
-export default function FileUploadZone({ onDataParsed, isProcessing, setIsProcessing, onError, lang = 'tr', theme = 'dark' }) {
+export default function FileUploadZone({ 
+  onDataParsed, 
+  isProcessing, 
+  setIsProcessing, 
+  onError, 
+  lang = 'tr', 
+  theme = 'dark' 
+}) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
   const [pasteContent, setPasteContent] = useState('');
+  const [batchProgress, setBatchProgress] = useState(null); // { current: 1, total: 5, fileName: '' }
   const fileInputRef = useRef(null);
+  
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
 
@@ -25,45 +51,162 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processSelectedFile(e.dataTransfer.files[0]);
+      processSelectedFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      processSelectedFile(e.target.files[0]);
+      processSelectedFiles(Array.from(e.target.files));
     }
   };
 
-  const processSelectedFile = async (file) => {
-    setIsProcessing(true);
-    try {
-      const fileName = file.name;
+  /**
+   * Helper to extract text from a single file (PDF or Text/CSV)
+   */
+  const extractFileText = async (file) => {
+    const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
+    
+    if (isPdf) {
+      try {
+        const { text } = await extractTextFromPdf(file);
+        return text;
+      } catch (pdfErr) {
+        console.warn('PDF.js binary extraction failed, falling back to text reader:', pdfErr);
+      }
+    }
+
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const rawText = event.target.result;
-          const hash = await generateDocumentHash(rawText);
-          const parsedResult = parseFinancialContent(rawText);
+      reader.onload = (event) => resolve(event.target.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsText(file);
+    });
+  };
 
-          parsedResult.meta.fileName = fileName;
-          parsedResult.meta.fileSize = file.size;
-          parsedResult.meta.documentHash = hash;
+  /**
+   * Process one or multiple files (batch merge)
+   */
+  const processSelectedFiles = async (files) => {
+    if (!files || files.length === 0) return;
 
-          onDataParsed(parsedResult);
-        } catch (err) {
-          console.error(err);
-          onError(err.message || 'Dosya okunamadı. Lütfen geçerli bir ekstre veya metin yükleyin.');
-        } finally {
-          setIsProcessing(false);
-        }
+    setIsProcessing(true);
+    setBatchProgress({ current: 0, total: files.length, fileName: files[0].name });
+
+    try {
+      const allParsedResults = [];
+      const fileNames = [];
+      let combinedRawText = '';
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setBatchProgress({ current: i + 1, total: files.length, fileName: file.name });
+        fileNames.push(file.name);
+
+        const rawText = await extractFileText(file);
+        combinedRawText += `\n--- DOSYA: ${file.name} ---\n` + rawText;
+
+        const parsed = parseFinancialContent(rawText);
+        parsed.sourceFileName = file.name;
+        allParsedResults.push(parsed);
+      }
+
+      // Single file handling
+      if (allParsedResults.length === 1) {
+        const singleResult = allParsedResults[0];
+        const hash = await generateDocumentHash(combinedRawText);
+
+        // Apply Smart Accounting Rules
+        const categorizedRows = applyRulesToTransactions(singleResult.rows || []);
+        const { rows: auditedRows, duplicateCount } = detectDuplicates(categorizedRows);
+
+        singleResult.rows = auditedRows;
+        singleResult.meta.fileName = files[0].name;
+        singleResult.meta.fileSize = files[0].size;
+        singleResult.meta.documentHash = hash;
+        singleResult.meta.duplicateCount = duplicateCount;
+        singleResult.meta.isBatch = false;
+
+        onDataParsed(singleResult);
+        return;
+      }
+
+      // Multi-file (Batch Merge) handling
+      let mergedRows = [];
+      let primaryBankName = allParsedResults[0]?.meta?.bankName || 'Çoklu Banka Ekstresi';
+      let primaryCurrency = allParsedResults[0]?.meta?.currency || 'TRY';
+
+      allParsedResults.forEach((res, fIdx) => {
+        const sourceName = fileNames[fIdx];
+        (res.rows || []).forEach(row => {
+          mergedRows.push({
+            ...row,
+            sourceFile: sourceName
+          });
+        });
+      });
+
+      // Sort all merged rows chronologically (oldest to newest)
+      mergedRows.sort((a, b) => {
+        const parseDate = (dStr) => {
+          if (!dStr) return 0;
+          const parts = dStr.match(/(\d{1,4})/g);
+          if (parts && parts.length >= 3) {
+            if (parts[0].length === 4) return new Date(`${parts[0]}-${parts[1]}-${parts[2]}`).getTime();
+            if (parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+          }
+          return 0;
+        };
+        return parseDate(a.date) - parseDate(b.date);
+      });
+
+      // Apply Smart Accounting Rules & Detect Duplicates across merged dataset
+      const categorizedRows = applyRulesToTransactions(mergedRows);
+      const { rows: auditedRows, duplicateCount } = detectDuplicates(categorizedRows);
+
+      let totalDebit = 0;
+      let totalCredit = 0;
+      auditedRows.forEach(r => {
+        totalDebit += (r.debit || 0);
+        totalCredit += (r.credit || 0);
+      });
+
+      const startingBal = allParsedResults[0]?.meta?.startingBalance || 0;
+      const endingBal = allParsedResults[allParsedResults.length - 1]?.meta?.endingBalance || (startingBal + totalCredit - totalDebit);
+      const hash = await generateDocumentHash(combinedRawText);
+
+      const batchMergedResult = {
+        meta: {
+          bankName: `${primaryBankName} (Birleşik ${files.length} Ekstre)`,
+          currency: primaryCurrency,
+          transactionCount: auditedRows.length,
+          startingBalance: startingBal,
+          endingBalance: endingBal,
+          calculatedEnding: startingBal + totalCredit - totalDebit,
+          totalDebit,
+          totalCredit,
+          netFlow: totalCredit - totalDebit,
+          discrepancy: 0,
+          isReconciled: true,
+          fileName: `${files.length}_Adet_Birlesik_Ekstre.xlsx`,
+          fileSize: files.reduce((acc, f) => acc + f.size, 0),
+          documentHash: hash,
+          isBatch: true,
+          batchFileCount: files.length,
+          batchFileNames: fileNames,
+          duplicateCount
+        },
+        rows: auditedRows
       };
 
-      reader.readAsText(file);
+      onDataParsed(batchMergedResult);
+
     } catch (err) {
       console.error(err);
-      onError('Dosya işlenirken bir hata oluştu.');
+      onError(err.message || 'Dosyalar işlenirken bir hata oluştu. Lütfen geçerli ekstreler yükleyin.');
+    } finally {
       setIsProcessing(false);
+      setBatchProgress(null);
     }
   };
 
@@ -77,9 +220,16 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
     try {
       const hash = await generateDocumentHash(pasteContent);
       const parsedResult = parseFinancialContent(pasteContent);
+      
+      const categorizedRows = applyRulesToTransactions(parsedResult.rows || []);
+      const { rows: auditedRows, duplicateCount } = detectDuplicates(categorizedRows);
+
+      parsedResult.rows = auditedRows;
       parsedResult.meta.fileName = 'Yapistirilan_Ekstre.txt';
       parsedResult.meta.fileSize = pasteContent.length;
       parsedResult.meta.documentHash = hash;
+      parsedResult.meta.duplicateCount = duplicateCount;
+      parsedResult.meta.isBatch = false;
 
       onDataParsed(parsedResult);
     } catch (err) {
@@ -104,7 +254,9 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
         netFlow: 0,
         discrepancy: 0,
         isReconciled: true,
-        documentHash: 'custom_blank_' + Date.now()
+        documentHash: 'custom_blank_' + Date.now(),
+        isBatch: false,
+        duplicateCount: 0
       },
       rows: [
         {
@@ -112,6 +264,7 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
           date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US'),
           description: lang === 'tr' ? 'İlk Finansal Hareket' : lang === 'de' ? 'Erste Buchung' : 'Initial Transaction',
           category: 'Genel',
+          accountCode: '770.01',
           debit: 0,
           credit: 0,
           amount: 0,
@@ -140,7 +293,7 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            <span>{t.tabUpload}</span>
+            <span>{t.tabUpload} (Tek / Toplu)</span>
           </button>
 
           <button
@@ -177,7 +330,7 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-3xl p-10 sm:p-16 text-center cursor-pointer transition-all duration-300 ${
+          className={`relative border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-300 ${
             isDragOver
               ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01] shadow-2xl'
               : isDark
@@ -189,19 +342,31 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf,.txt,.csv,.xml,.png,.jpg,.jpeg"
+            multiple
+            accept=".pdf,.txt,.csv,.xml,.tsv,.json"
             className="hidden"
           />
 
           {isProcessing ? (
-            <div className="flex flex-col items-center justify-center py-8">
+            <div className="flex flex-col items-center justify-center py-6">
               <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
-              <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{t.processingTitle}</p>
-              <p className="text-xs text-slate-400 mt-1">{t.processingSubtitle}</p>
+              <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                {batchProgress && batchProgress.total > 1
+                  ? `Toplu Ekstre Ayrıştırılıyor (${batchProgress.current}/${batchProgress.total})...`
+                  : t.processingTitle}
+              </p>
+              {batchProgress && (
+                <p className="text-xs text-emerald-400 font-mono mt-1 max-w-sm truncate">
+                  {batchProgress.fileName}
+                </p>
+              )}
+              <p className="text-xs text-slate-400 mt-2">
+                Sayfalar ve tablolar sıfır sunucu güvenliğiyle işleniyor
+              </p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <div className={`w-20 h-20 rounded-3xl border flex items-center justify-center mb-5 group-hover:scale-110 transition-transform ${
+              <div className={`w-20 h-20 rounded-3xl border flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${
                 isDark 
                   ? 'bg-gradient-to-tr from-emerald-500/20 to-teal-500/10 border-emerald-500/30' 
                   : 'bg-emerald-50 border-emerald-200 shadow-sm'
@@ -209,18 +374,47 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
                 <UploadCloud className="w-10 h-10 text-emerald-500" />
               </div>
 
-              <h3 className={`text-xl sm:text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                {t.dropTitle}
-              </h3>
-              <p className={`text-xs sm:text-sm mb-6 max-w-md ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {t.dropSubtitle} <br />
-                <span className="font-mono text-xs opacity-75">{t.dropSupported}</span>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className={`text-xl sm:text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                  {t.dropTitle}
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Çoklu / Toplu Destekli
+                </span>
+              </div>
+
+              <p className={`text-xs sm:text-sm mb-5 max-w-lg ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                12 aylık PDF ekstrelerinizi veya farklı banka çıktılarınızı tek seferde bırakın. Sistem kronolojik olarak birleştirir ve hesap kodlarını otomatik atar.
               </p>
+
+              {/* Feature Highlights Pills */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+                <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
+                  isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  Toplu PDF Birleştirme
+                </span>
+
+                <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
+                  isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Otomatik TDHP Kodu (770/600)
+                </span>
+
+                <span className={`text-[11px] px-3 py-1 rounded-xl border flex items-center gap-1.5 font-medium ${
+                  isDark ? 'bg-slate-950/60 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}>
+                  <Lock className="w-3.5 h-3.5 text-blue-400" />
+                  Zero-Knowledge Güvenlik
+                </span>
+              </div>
 
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium ${
                 isDark ? 'bg-[#090e1a] border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
               }`}>
-                <Lock className="w-4 h-4 text-emerald-500" />
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <span>{t.zeroKnowledgeNote}</span>
               </div>
             </div>
@@ -243,9 +437,10 @@ export default function FileUploadZone({ onDataParsed, isProcessing, setIsProces
           <textarea
             value={pasteContent}
             onChange={(e) => setPasteContent(e.target.value)}
-            placeholder="01.08.2026   MAAŞ ÖDEMELERİ        -28.500,00   16.750,00
+            placeholder="01.08.2026   SHELL AKARYAKIT       -1.450,00   16.750,00
 02.08.2026   GELEN EFT - YAZILIM   +35.000,00   51.750,00
-04.08.2026   OFİS KİRASI           -12.000,00   39.750,00"
+04.08.2026   OFİS KİRASI           -12.000,00   39.750,00
+05.08.2026   YEMEKSEPETI           -340,00      39.410,00"
             rows={8}
             className={`w-full rounded-2xl border p-4 text-xs font-mono placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-y ${
               isDark ? 'bg-slate-950 border-white/10 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'

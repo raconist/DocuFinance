@@ -23,11 +23,21 @@ import {
   ArrowLeft,
   Printer,
   ArrowUpDown,
-  DollarSign
+  DollarSign,
+  Layers,
+  Building2,
+  BookOpen,
+  CheckSquare,
+  Square,
+  ChevronDown
 } from 'lucide-react';
 import { formatCurrency, parseFinancialNumber } from '../utils/parserEngine';
 import { maskSensitiveData } from '../utils/security';
-import { exportToExcel, exportToCSV, exportToJSON } from '../utils/exportEngine';
+import { exportToExcel } from '../utils/exportEngine';
+import { applyRulesToTransactions } from '../utils/rulesEngine';
+import { detectDuplicates, removeDuplicateRows } from '../utils/duplicateDetector';
+import ExportModal from './ExportModal';
+import RulesModal from './RulesModal';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
 
@@ -43,11 +53,19 @@ export default function DataStudio({
   const [isMasked, setIsMasked] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [sortField, setSortField] = useState('date'); // 'date' | 'amount' | 'balance' | 'description'
+  const [selectedSourceFile, setSelectedSourceFile] = useState('ALL');
+  const [sortField, setSortField] = useState('date'); // 'date' | 'amount' | 'balance' | 'description' | 'accountCode'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
   const [customCurrency, setCustomCurrency] = useState(parsedData.meta?.currency || 'TRY');
   const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(true);
   const [exportSuccessMsg, setExportSuccessMsg] = useState(null);
+  
+  // Modals State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+
+  // Row Selection for Bulk Actions
+  const [selectedRowIds, setSelectedRowIds] = useState(new Set());
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
@@ -55,6 +73,7 @@ export default function DataStudio({
   React.useEffect(() => {
     setData(parsedData);
     setCustomCurrency(parsedData.meta?.currency || 'TRY');
+    setSelectedRowIds(new Set());
   }, [parsedData]);
 
   // Handle Sort Toggle
@@ -92,6 +111,9 @@ export default function DataStudio({
     const discrepancy = Math.abs(calculatedEnding - officialEnding);
     const isReconciled = discrepancy < 0.05;
 
+    // Check duplicate count
+    const dupCount = rows.filter(r => r.isDuplicate).length;
+
     return {
       count: rows.length,
       totalDebit,
@@ -104,21 +126,28 @@ export default function DataStudio({
       isReconciled,
       categoryTotals,
       currency: customCurrency,
-      bankName: data.meta?.bankName || 'Banka Ekstresi'
+      bankName: data.meta?.bankName || 'Banka Ekstresi',
+      isBatch: Boolean(data.meta?.isBatch),
+      batchFileCount: data.meta?.batchFileCount || 1,
+      batchFileNames: data.meta?.batchFileNames || [],
+      duplicateCount: dupCount
     };
   }, [data, customCurrency]);
 
   // Filtered & Sorted rows
   const filteredAndSortedRows = useMemo(() => {
     let rows = (data.rows || []).filter(row => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch = 
-        row.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        row.date.includes(searchQuery) ||
-        (row.category && row.category.toLowerCase().includes(searchQuery.toLowerCase()));
+        (row.description || '').toLowerCase().includes(q) ||
+        (row.date || '').includes(searchQuery) ||
+        (row.category && row.category.toLowerCase().includes(q)) ||
+        (row.accountCode && row.accountCode.toLowerCase().includes(q));
       
       const matchesCat = selectedCategory === 'ALL' || row.category === selectedCategory;
+      const matchesFile = selectedSourceFile === 'ALL' || row.sourceFile === selectedSourceFile;
 
-      return matchesSearch && matchesCat;
+      return matchesSearch && matchesCat && matchesFile;
     });
 
     return rows.sort((a, b) => {
@@ -129,10 +158,10 @@ export default function DataStudio({
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
       return sortOrder === 'asc' 
-        ? String(valA).localeCompare(String(valB)) 
-        : String(valB).localeCompare(String(valA));
+        ? String(valA || '').localeCompare(String(valB || '')) 
+        : String(valB || '').localeCompare(String(valA || ''));
     });
-  }, [data.rows, searchQuery, selectedCategory, sortField, sortOrder]);
+  }, [data.rows, searchQuery, selectedCategory, selectedSourceFile, sortField, sortOrder]);
 
   const categories = useMemo(() => {
     const set = new Set();
@@ -165,7 +194,8 @@ export default function DataStudio({
       id: 'tx_custom_' + Date.now(),
       date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : lang === 'de' ? 'de-DE' : 'en-US'),
       description: 'Yeni Finansal Hareket',
-      category: 'Genel',
+      category: 'Genel Giderler',
+      accountCode: '770.01',
       debit: 0,
       credit: 0,
       amount: 0,
@@ -186,7 +216,57 @@ export default function DataStudio({
     });
   };
 
-  const handleExportExcel = () => {
+  // Remove duplicates action
+  const handleCleanDuplicates = () => {
+    const cleaned = removeDuplicateRows(data.rows || []);
+    setData({
+      ...data,
+      rows: cleaned
+    });
+    setExportSuccessMsg('Mükerrer (çift) kayıtlar tablodan başarıyla temizlendi!');
+    setTimeout(() => setExportSuccessMsg(null), 3500);
+  };
+
+  // Apply Rules from RulesModal
+  const handleApplyRules = (customRules) => {
+    const updated = applyRulesToTransactions(data.rows || [], customRules);
+    setData({
+      ...data,
+      rows: updated
+    });
+  };
+
+  // Row Selection Handlers
+  const handleToggleSelectAll = () => {
+    if (selectedRowIds.size === filteredAndSortedRows.length) {
+      setSelectedRowIds(new Set());
+    } else {
+      const allIds = new Set(filteredAndSortedRows.map((r, i) => r.id || `row_${i}`));
+      setSelectedRowIds(allIds);
+    }
+  };
+
+  const handleToggleRowSelect = (rowId) => {
+    const updated = new Set(selectedRowIds);
+    if (updated.has(rowId)) {
+      updated.delete(rowId);
+    } else {
+      updated.add(rowId);
+    }
+    setSelectedRowIds(updated);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedRowIds.size === 0) return;
+    if (window.confirm(`Seçili ${selectedRowIds.size} satırı silmek istediğinize emin misiniz?`)) {
+      const remaining = (data.rows || []).filter((r, i) => !selectedRowIds.has(r.id || `row_${i}`));
+      setData({ ...data, rows: remaining });
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  // Quick 1-Click Excel Export
+  const handleQuickExportExcel = () => {
     try {
       confetti({
         particleCount: 80,
@@ -206,25 +286,15 @@ export default function DataStudio({
     setTimeout(() => setExportSuccessMsg(null), 4000);
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(data, {
-      fileName: `${stats.bankName}_${new Date().toISOString().slice(0, 10)}`,
-      isMasked: isMasked,
-      delimiter: ';'
-    });
-    setExportSuccessMsg('CSV dosyası UTF-8 formatında indirildi.');
-    setTimeout(() => setExportSuccessMsg(null), 4000);
-  };
-
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
       
-      {/* Top Breadcrumb & Back Navigation */}
-      <div className="flex items-center justify-between">
+      {/* Top Breadcrumb & Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onReset}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all hover:scale-[1.02] shadow-sm ${
@@ -234,46 +304,69 @@ export default function DataStudio({
           }`}
         >
           <ArrowLeft className="w-4 h-4 text-emerald-500" />
-          <span>{lang === 'tr' ? '← Ana Sayfaya Dön & Yeni Dosya' : lang === 'de' ? '← Zur Startseite & Neue Datei' : '← Back to Home & New Upload'}</span>
+          <span>{lang === 'tr' ? '← Ana Sayfaya Dön & Yeni Dosya' : '← Back to Home'}</span>
         </button>
 
-        {/* Currency Switcher */}
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${
-          isDark ? 'bg-slate-900 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
-        }`}>
-          <span>Para Birimi:</span>
-          <select
-            value={customCurrency}
-            onChange={(e) => setCustomCurrency(e.target.value)}
-            className="bg-transparent text-emerald-500 font-extrabold focus:outline-none cursor-pointer"
+        <div className="flex items-center gap-2.5">
+          
+          {/* Smart Rules Button */}
+          <button
+            onClick={() => setIsRulesModalOpen(true)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 border-amber-500/40 text-amber-300' 
+                : 'bg-white hover:bg-amber-50/60 border-amber-300 text-amber-700'
+            }`}
           >
-            <option value="TRY">₺ TRY</option>
-            <option value="USD">$ USD</option>
-            <option value="EUR">€ EUR</option>
-            <option value="GBP">£ GBP</option>
-          </select>
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Akıllı Kurallar & TDHP</span>
+          </button>
+
+          {/* Currency Switcher */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${
+            isDark ? 'bg-slate-900 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+          }`}>
+            <span>Para Birimi:</span>
+            <select
+              value={customCurrency}
+              onChange={(e) => setCustomCurrency(e.target.value)}
+              className="bg-transparent text-emerald-500 font-extrabold focus:outline-none cursor-pointer"
+            >
+              <option value="TRY">₺ TRY</option>
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+              <option value="GBP">£ GBP</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Main Bank Header Bar */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-5 p-6 rounded-3xl border shadow-xl transition-all ${
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-5 p-6 rounded-3xl border shadow-xl transition-all ${
         isDark 
           ? 'bg-slate-900/90 border-emerald-500/30' 
           : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-              isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
+              isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
             }`}>
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
-              <h2 className={`text-2xl sm:text-3xl font-extrabold font-display ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                {stats.bankName}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className={`text-2xl sm:text-3xl font-extrabold font-display ${isDark ? 'text-white' : 'text-slate-950'}`}>
+                  {stats.bankName}
+                </h2>
+                {stats.isBatch && (
+                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    {stats.batchFileCount} Dosya Birleşik
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {stats.count} {t.transactionsParsed} | Zero-Knowledge Memory Safe
+                {stats.count} {t.transactionsParsed} | Zero-Knowledge İstemci Güvenliği
               </p>
             </div>
           </div>
@@ -282,21 +375,23 @@ export default function DataStudio({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           
+          {/* Mask Sensitive Data Toggle */}
           <button
             onClick={() => setIsMasked(!isMasked)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
               isMasked
                 ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                 : isDark 
                   ? 'bg-slate-800 text-slate-300 border-white/10 hover:border-white/20' 
                   : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
             }`}
-            title="IBAN, TC Kimlik, Vergi No ve Kart Numaralarını Maskeler"
+            title="IBAN, TC Kimlik ve Kart Numaralarını Maskeler"
           >
             {isMasked ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
-            <span>{isMasked ? t.hiddenPii : t.hidePii}</span>
+            <span className="hidden sm:inline">{isMasked ? t.hiddenPii : t.hidePii}</span>
           </button>
 
+          {/* Print */}
           <button
             onClick={handlePrint}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
@@ -307,31 +402,53 @@ export default function DataStudio({
             title="Yazdır / PDF Olarak Kaydet"
           >
             <Printer className="w-4 h-4" />
-            <span className="hidden sm:inline">Yazdır</span>
+            <span className="hidden md:inline">Yazdır</span>
           </button>
 
+          {/* Quick Excel Download */}
           <button
-            onClick={handleExportCSV}
+            onClick={handleQuickExportExcel}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
               isDark 
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10' 
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
             }`}
           >
-            <FileText className="w-4 h-4 text-blue-500" />
-            <span>{t.downloadCsv}</span>
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Hızlı Excel (.xlsx)</span>
           </button>
 
+          {/* Universal Export Modal Trigger */}
           <button
-            onClick={handleExportExcel}
+            onClick={() => setIsExportModalOpen(true)}
             className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs sm:text-sm font-extrabold text-slate-950 shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Download className="w-4 h-4 stroke-[2.5]" />
-            <span>{t.downloadExcel}</span>
+            <span>Dışa Aktarma & Muhasebe (Luca/Zirve/QBO)</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-70" />
           </button>
 
         </div>
       </div>
+
+      {/* Duplicate Transactions Warning Banner */}
+      {stats.duplicateCount > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-medium">
+              <strong>{stats.duplicateCount} adet mükerrer (çakışan)</strong> işlem satırı tespit edildi.
+            </span>
+          </div>
+
+          <button
+            onClick={handleCleanDuplicates}
+            className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md"
+          >
+            Mükerrerleri Otomatik Temizle
+          </button>
+        </div>
+      )}
 
       {/* Success Notification Alert */}
       {exportSuccessMsg && (
@@ -403,7 +520,7 @@ export default function DataStudio({
             : isDark ? 'bg-amber-950/40 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
         }`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-wider">Audit</span>
+            <span className="text-xs font-extrabold uppercase tracking-wider">Mutabakat</span>
             {stats.isReconciled ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
           </div>
           <span className="text-xs font-extrabold font-mono mt-2">
@@ -451,17 +568,19 @@ export default function DataStudio({
         </div>
       )}
 
-      {/* Grid Controls */}
+      {/* Grid Controls & Bulk Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
+        
+        {/* Search & Filters */}
         <div className="flex flex-wrap items-center gap-3">
           
-          <div className="relative flex-1 sm:w-72">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
+              placeholder="Ara (tarih, açıklama, 770)..."
               className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-xs focus:outline-none focus:border-emerald-500 ${
                 isDark ? 'bg-slate-900 border-white/10 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
               }`}
@@ -472,7 +591,7 @@ export default function DataStudio({
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className={`px-4 py-2.5 rounded-2xl border text-xs font-medium focus:outline-none focus:border-emerald-500 ${
+              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-medium focus:outline-none focus:border-emerald-500 ${
                 isDark ? 'bg-slate-900 border-white/10 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
               }`}
             >
@@ -483,8 +602,40 @@ export default function DataStudio({
             </select>
           )}
 
+          {/* Batch File Filter if Multi-File */}
+          {stats.isBatch && stats.batchFileNames.length > 1 && (
+            <select
+              value={selectedSourceFile}
+              onChange={(e) => setSelectedSourceFile(e.target.value)}
+              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-medium focus:outline-none focus:border-emerald-500 ${
+                isDark ? 'bg-slate-900 border-white/10 text-emerald-400' : 'bg-white border-slate-200 text-emerald-700'
+              }`}
+            >
+              <option value="ALL">Tüm Dosyalar ({stats.batchFileNames.length})</option>
+              {stats.batchFileNames.map(fName => (
+                <option key={fName} value={fName}>{fName}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Bulk Selection Actions */}
+          {selectedRowIds.size > 0 && (
+            <div className="flex items-center gap-2 animate-fadeIn">
+              <span className="text-xs font-bold text-emerald-400 font-mono">
+                {selectedRowIds.size} satır seçili
+              </span>
+              <button
+                onClick={handleBulkDelete}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 text-xs font-bold transition-colors"
+              >
+                Seçilileri Sil
+              </button>
+            </div>
+          )}
+
         </div>
 
+        {/* Add Row Button */}
         <button
           onClick={handleAddRow}
           className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all hover:scale-[1.01] ${
@@ -498,13 +649,21 @@ export default function DataStudio({
         </button>
       </div>
 
-      {/* Spreadsheet Data Table with Column Sorting */}
+      {/* Spreadsheet Data Table with Column Sorting & TDHP Account Code */}
       <div className="data-table-container shadow-2xl max-h-[560px] overflow-y-auto">
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: '50px' }}>#</th>
-              <th style={{ width: '130px', cursor: 'pointer' }} onClick={() => handleSort('date')}>
+              <th style={{ width: '40px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedRowIds.size > 0 && selectedRowIds.size === filteredAndSortedRows.length}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-700 text-emerald-500 cursor-pointer"
+                />
+              </th>
+              <th style={{ width: '45px' }}>#</th>
+              <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => handleSort('date')}>
                 <div className="flex items-center gap-1.5 hover:text-emerald-500">
                   <span>{t.dateCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
@@ -516,46 +675,69 @@ export default function DataStudio({
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '160px' }}>{t.categoryCol}</th>
-              <th style={{ width: '140px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('debit')}>
+              <th style={{ width: '150px' }}>{t.categoryCol}</th>
+              <th style={{ width: '110px', cursor: 'pointer' }} onClick={() => handleSort('accountCode')}>
+                <div className="flex items-center gap-1.5 hover:text-emerald-500">
+                  <span>TDHP Kodu</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('debit')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.debitCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '140px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('credit')}>
+              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('credit')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.creditCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '140px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('balance')}>
+              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('balance')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.balanceCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '60px', textAlign: 'center' }}>{t.deleteCol}</th>
+              <th style={{ width: '50px', textAlign: 'center' }}>{t.deleteCol}</th>
             </tr>
           </thead>
           <tbody>
             {filteredAndSortedRows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-12 text-slate-400 text-xs">
+                <td colSpan={10} className="text-center py-12 text-slate-400 text-xs">
                   Aramanıza uygun işlem bulunamadı.
                 </td>
               </tr>
             ) : (
               filteredAndSortedRows.map((row, index) => {
                 const desc = isMasked ? maskSensitiveData(row.description) : row.description;
+                const rowId = row.id || `row_${index}`;
+                const isSelected = selectedRowIds.has(rowId);
+
                 return (
-                  <tr key={row.id || index}>
-                    <td className="font-mono text-slate-400 text-xs">{index + 1}</td>
+                  <tr 
+                    key={rowId}
+                    className={`${row.isDuplicate ? (isDark ? 'bg-amber-950/20' : 'bg-amber-50') : ''} ${isSelected ? (isDark ? 'bg-emerald-950/30' : 'bg-emerald-50') : ''}`}
+                  >
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleRowSelect(rowId)}
+                        className="rounded border-slate-700 text-emerald-500 cursor-pointer"
+                      />
+                    </td>
+
+                    <td className="font-mono text-slate-400 text-xs">
+                      {index + 1}
+                    </td>
                     
                     <td>
                       <input
                         type="text"
-                        value={row.date}
+                        value={row.date || ''}
                         onChange={(e) => handleCellEdit(index, 'date', e.target.value)}
                         className={`bg-transparent text-xs font-mono border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
                           isDark ? 'text-slate-200' : 'text-slate-800'
@@ -564,12 +746,30 @@ export default function DataStudio({
                     </td>
 
                     <td>
+                      <div className="flex items-center gap-1.5">
+                        {row.isDuplicate && (
+                          <span title="Mükerrer (Çift) Kayıt" className="flex-shrink-0 text-amber-400 text-[10px] font-bold px-1 rounded bg-amber-500/20">
+                            ÇİFT
+                          </span>
+                        )}
+                        <input
+                          type="text"
+                          value={desc}
+                          onChange={(e) => handleCellEdit(index, 'description', e.target.value)}
+                          className={`bg-transparent text-xs border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-medium ${
+                            isDark ? 'text-slate-100' : 'text-slate-950'
+                          }`}
+                        />
+                      </div>
+                    </td>
+
+                    <td>
                       <input
                         type="text"
-                        value={desc}
-                        onChange={(e) => handleCellEdit(index, 'description', e.target.value)}
-                        className={`bg-transparent text-xs border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-medium ${
-                          isDark ? 'text-slate-100' : 'text-slate-950'
+                        value={row.category || 'Genel Giderler'}
+                        onChange={(e) => handleCellEdit(index, 'category', e.target.value)}
+                        className={`bg-transparent text-xs font-medium border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
+                          isDark ? 'text-slate-300' : 'text-slate-700'
                         }`}
                       />
                     </td>
@@ -577,11 +777,9 @@ export default function DataStudio({
                     <td>
                       <input
                         type="text"
-                        value={row.category || 'Genel'}
-                        onChange={(e) => handleCellEdit(index, 'category', e.target.value)}
-                        className={`bg-transparent text-xs font-medium border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
-                          isDark ? 'text-slate-300' : 'text-slate-700'
-                        }`}
+                        value={row.accountCode || (row.credit > 0 ? '600.01' : '770.01')}
+                        onChange={(e) => handleCellEdit(index, 'accountCode', e.target.value)}
+                        className="bg-transparent text-xs font-mono font-bold text-amber-400 border-b border-transparent hover:border-slate-500 focus:border-amber-500 px-1 py-1 rounded w-full outline-none"
                       />
                     </td>
 
@@ -644,6 +842,27 @@ export default function DataStudio({
           <span className="text-emerald-500">Toplam Alacak: {formatCurrency(stats.totalCredit, stats.currency)}</span>
         </div>
       </div>
+
+      {/* Universal Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        data={data}
+        isMaskedDefault={isMasked}
+        currency={stats.currency}
+        bankName={stats.bankName}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* Smart Accounting Rules Modal */}
+      <RulesModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+        onApplyRules={handleApplyRules}
+        theme={theme}
+        lang={lang}
+      />
 
     </div>
   );
