@@ -297,12 +297,6 @@ export default function AdminPanelModal({
                 Yönetici Paneline Giriş Yap
               </button>
             </form>
-
-            <div className="pt-2">
-              <span className="text-[11px] text-slate-500 block">
-                Varsayılan Parola: <code className="font-mono text-amber-400 font-bold">docu2026admin</code>
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -932,7 +926,7 @@ export default function AdminPanelModal({
                       type="password"
                       value={currentPass}
                       onChange={(e) => setCurrentPass(e.target.value)}
-                      placeholder="Mevcut şifreniz (Varsayılan: docu2026admin)..."
+                      placeholder="Mevcut şifrenizi girin..."
                       required
                       className={`w-full px-4 py-2.5 rounded-xl border font-mono ${
                         isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'
