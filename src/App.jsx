@@ -6,10 +6,13 @@ import DataStudio from './components/DataStudio';
 import PricingModal from './components/PricingModal';
 import SecurityModal from './components/SecurityModal';
 import HistoryModal from './components/HistoryModal';
+import AuthModal from './components/AuthModal';
+import AccountDashboardModal from './components/AccountDashboardModal';
 import ProgrammaticSeoDirectory from './components/ProgrammaticSeoDirectory';
 import { SAMPLE_STATEMENTS, parseFinancialContent } from './utils/parserEngine';
 import { generateDocumentHash } from './utils/security';
 import { saveStatementToLocalDB } from './utils/dbStorage';
+import { getCurrentUser, incrementUserStats } from './utils/authService';
 import { TRANSLATIONS } from './utils/i18n';
 import { ShieldCheck, Heart, FileSpreadsheet, Lock, AlertCircle } from 'lucide-react';
 
@@ -19,8 +22,11 @@ export default function App() {
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [currentView, setCurrentView] = useState('app');
-  const [isProUser, setIsProUser] = useState(false);
+  const [isProUser, setIsProUser] = useState(() => Boolean(getCurrentUser()?.tier?.includes('pro')));
   const [errorMessage, setErrorMessage] = useState(null);
   const [lang, setLang] = useState('tr');
   const [theme, setTheme] = useState('dark');
@@ -50,6 +56,18 @@ export default function App() {
     setErrorMessage(null);
   };
 
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    if (user?.tier?.includes('pro')) {
+      setIsProUser(true);
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsProUser(false);
+  };
+
   const handleSelectSample = async (sampleKey) => {
     setIsProcessing(true);
     setErrorMessage(null);
@@ -63,6 +81,8 @@ export default function App() {
       result.meta.documentHash = hash;
 
       await saveStatementToLocalDB(result);
+      incrementUserStats(result.rows?.length || 1);
+      setCurrentUser(getCurrentUser());
 
       setParsedData(result);
       setCurrentView('app');
@@ -76,6 +96,8 @@ export default function App() {
 
   const handleDataParsed = async (data) => {
     await saveStatementToLocalDB(data);
+    incrementUserStats(data.rows?.length || 1);
+    setCurrentUser(getCurrentUser());
     setParsedData(data);
   };
 
@@ -84,11 +106,14 @@ export default function App() {
       isDark ? 'bg-[#070b13] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
     }`}>
       
-      {/* Top Navbar */}
+      {/* Top Navbar with Auth & Account Triggers */}
       <Navbar
         onOpenSecurity={() => setIsSecurityOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAccount={() => setIsAccountOpen(true)}
+        currentUser={currentUser}
         onSelectBankPage={(view) => setCurrentView(view ? 'seo' : 'app')}
         onGoHome={handleGoHome}
         hasActiveData={Boolean(parsedData)}
@@ -161,10 +186,10 @@ export default function App() {
                         1
                       </div>
                       <h4 className={`text-sm font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                        {lang === 'tr' ? 'Dosyayı Yükleyin veya Yapıştırın' : lang === 'de' ? 'Datei Hochladen oder Einfügen' : 'Upload or Paste Statement'}
+                        {lang === 'tr' ? 'Tek veya Toplu 12 Aylık Ekstre Yükleyin' : 'Upload Single or 12-Month Batch Statements'}
                       </h4>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        {lang === 'tr' ? 'PDF, e-Fatura XML veya internet bankacılığı kopyasını bırakın.' : lang === 'de' ? 'Ziehen Sie PDF-Kontoauszüge oder XML-Rechnungen hierher.' : 'Drop any PDF, e-invoice XML or raw internet banking text.'}
+                        {lang === 'tr' ? 'PDF, e-Fatura XML veya internet bankacılığı kopyasını bırakın. Çoklu dosyaları kronolojik birleştirir.' : 'Drop PDFs, e-invoices or bank text. Merges multi-month files chronologically.'}
                       </p>
                     </div>
 
@@ -175,10 +200,10 @@ export default function App() {
                         2
                       </div>
                       <h4 className={`text-sm font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                        {lang === 'tr' ? 'Otomatik Bakiye Mutabakatı' : lang === 'de' ? 'Automatische Saldenabstimmung' : 'Auto Balance Reconciliation'}
+                        {lang === 'tr' ? 'Akıllı TDHP (770/600) & Mutabakat' : 'Smart TDHP Codes & Auto Balance Audit'}
                       </h4>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        {lang === 'tr' ? 'Açılış bakiyesi, giren, çıkan ve kapanış tutarı kuruşu kuruşuna doğrulanır.' : lang === 'de' ? 'Anfangs-, Einnahmen-, Ausgaben- und Endsalden werden centgenau geprüft.' : 'Starting balance, inflow, outflow and ending balances reconciled to the penny.'}
+                        {lang === 'tr' ? 'Akaryakıt, yemek, kira, maaş harcamalarını Tekdüzen Hesap Kodlarıyla otomatik eşleştirir.' : 'Auto-maps transactions to Turkish / GAAP accounting codes and verifies opening/closing balances.'}
                       </p>
                     </div>
 
@@ -189,10 +214,10 @@ export default function App() {
                         3
                       </div>
                       <h4 className={`text-sm font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                        {lang === 'tr' ? 'Formüllü Excel (.xlsx) İndirin' : lang === 'de' ? 'Formel-fähiges Excel Herunterladen' : 'Export Formula-Ready Excel'}
+                        {lang === 'tr' ? 'Luca, Zirve, Logo & Excel İndirin' : 'Export to Luca, Zirve, Logo & QuickBooks'}
                       </h4>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        {lang === 'tr' ? 'Logo, Mikro, Zirve, Luca ve Excel\'e hazır biçimli döküm anında elinizde.' : lang === 'de' ? 'Kompatibel mit DATEV, Lexware, Excel und Buchhaltungssoftware.' : 'Ready for QuickBooks, Xero, ERPs and financial auditors.'}
+                        {lang === 'tr' ? 'Muhasebe programınızın beklediği birebir CSV/Excel formatında saniyeler içinde dışa aktarın.' : 'Export directly to accounting software templates without manual column tweaking.'}
                       </p>
                     </div>
 
@@ -262,6 +287,10 @@ export default function App() {
         onClose={() => setIsPricingOpen(false)}
         onUpgradeSuccess={(plan) => {
           setIsProUser(true);
+          const current = getCurrentUser();
+          if (current) {
+            setCurrentUser({ ...current, tier: plan });
+          }
         }}
         lang={lang}
       />
@@ -278,6 +307,24 @@ export default function App() {
           setParsedData(data);
           setCurrentView('app');
         }}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        theme={theme}
+        lang={lang}
+      />
+
+      <AccountDashboardModal
+        isOpen={isAccountOpen}
+        onClose={() => setIsAccountOpen(false)}
+        user={currentUser}
+        onLogout={handleLogout}
+        onOpenPricing={() => setIsPricingOpen(true)}
+        theme={theme}
+        lang={lang}
       />
 
     </div>

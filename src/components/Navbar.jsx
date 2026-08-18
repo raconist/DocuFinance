@@ -1,11 +1,27 @@
 import React from 'react';
-import { ShieldCheck, Lock, Sparkles, FileSpreadsheet, Database, Sun, Moon, Home, ChevronRight } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Sparkles, 
+  FileSpreadsheet, 
+  Database, 
+  Sun, 
+  Moon, 
+  Home, 
+  User,
+  Building2,
+  ChevronRight,
+  LogIn
+} from 'lucide-react';
 import { TRANSLATIONS } from '../utils/i18n';
 
 export default function Navbar({ 
   onOpenSecurity, 
   onOpenPricing, 
   onOpenHistory, 
+  onOpenAuth,
+  onOpenAccount,
+  currentUser,
   onSelectBankPage, 
   onGoHome,
   currentView,
@@ -17,6 +33,7 @@ export default function Navbar({
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
+  const isPro = currentUser?.tier?.includes('pro');
 
   return (
     <header className={`sticky top-0 z-40 w-full border-b transition-colors duration-300 backdrop-blur-xl ${
@@ -43,7 +60,7 @@ export default function Navbar({
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
                   : 'bg-emerald-50 text-emerald-700 border-emerald-200'
               }`}>
-                v2.6
+                v2.8 Pro
               </span>
             </div>
             <p className={`text-xs hidden sm:block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -68,7 +85,7 @@ export default function Navbar({
             title="Ana Sayfaya Dön"
           >
             <Home className="w-4 h-4 text-emerald-500" />
-            <span className="hidden sm:inline">{lang === 'tr' ? 'Ana Sayfa' : lang === 'de' ? 'Startseite' : 'Home'}</span>
+            <span className="hidden sm:inline">{lang === 'tr' ? 'Ana Sayfa' : 'Home'}</span>
           </button>
 
           {/* Theme Toggle (Light / Dark) */}
@@ -92,7 +109,7 @@ export default function Navbar({
               <button
                 key={l}
                 onClick={() => onLangChange(l)}
-                className={`px-2.5 py-1 rounded-lg uppercase transition-all ${
+                className={`px-2 py-1 rounded-lg uppercase transition-all ${
                   lang === l 
                     ? 'bg-emerald-500 text-slate-950 shadow-sm font-extrabold' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
@@ -106,7 +123,7 @@ export default function Navbar({
           {/* History / DB Trigger */}
           <button
             onClick={onOpenHistory}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all group ${
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all group ${
               isDark 
                 ? 'bg-slate-900 hover:bg-slate-800 border-white/10 text-slate-200' 
                 : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-sm'
@@ -114,16 +131,53 @@ export default function Navbar({
             title="Kayıtlı Ekstrelerim ve Yerel DB Geçmişi"
           >
             <Database className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-            <span className="hidden md:inline">{t.historyBtn}</span>
+            <span className="hidden lg:inline">{t.historyBtn}</span>
           </button>
+
+          {/* User Account or Login Button */}
+          {currentUser ? (
+            <button
+              onClick={onOpenAccount}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+                isPro 
+                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/50' 
+                  : isDark ? 'bg-slate-900 border-white/10 text-slate-200 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 font-extrabold flex items-center justify-center text-xs">
+                {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+              </div>
+              <span className="max-w-[100px] truncate hidden sm:inline">
+                {currentUser.companyName || currentUser.name}
+              </span>
+              {isPro && (
+                <span className="text-[10px] bg-emerald-500 text-slate-950 font-extrabold px-1.5 py-0.2 rounded">
+                  PRO
+                </span>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                isDark 
+                  ? 'bg-slate-900 hover:bg-slate-800 border-white/10 text-slate-200' 
+                  : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800'
+              }`}
+            >
+              <LogIn className="w-4 h-4 text-emerald-500" />
+              <span>Giriş Yap</span>
+            </button>
+          )}
 
           {/* Pricing Button */}
           <button
             onClick={onOpenPricing}
-            className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs sm:text-sm font-extrabold text-slate-950 shadow-md shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs sm:text-sm font-extrabold text-slate-950 shadow-md shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4 fill-slate-950" />
-            <span>{t.pricingBtn}</span>
+            <span className="hidden sm:inline">{t.pricingBtn}</span>
+            <span className="sm:hidden">Pro</span>
           </button>
 
         </div>
