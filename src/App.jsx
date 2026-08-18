@@ -47,17 +47,25 @@ export default function App() {
     }
   }, [theme]);
 
-  // Secret Admin Access STRICTLY via Keyboard (Ctrl + Shift + R / Cmd + Shift + R)
+  // Secret Admin Access via Collision-Free Shortcuts: Ctrl + Shift + M OR Alt + Shift + A
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+      // 1. Ctrl + Shift + M (or Cmd + Shift + M) -> (M = Master / Manager)
+      const isCtrlShiftM = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'M' || e.key === 'm');
+      // 2. Alt + Shift + A -> (A = Admin)
+      const isAltShiftA = e.altKey && e.shiftKey && (e.key === 'A' || e.key === 'a');
+      // 3. Ctrl + Alt + A
+      const isCtrlAltA = (e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'A' || e.key === 'a');
+
+      if (isCtrlShiftM || isAltShiftA || isCtrlAltA) {
         e.preventDefault();
+        e.stopPropagation();
         setIsAdminOpen(prev => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
   const handleToggleTheme = () => {
