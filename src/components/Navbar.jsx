@@ -11,7 +11,8 @@ import {
   User,
   Building2,
   ChevronRight,
-  LogIn
+  LogIn,
+  Settings
 } from 'lucide-react';
 import { TRANSLATIONS } from '../utils/i18n';
 
@@ -21,6 +22,7 @@ export default function Navbar({
   onOpenHistory, 
   onOpenAuth,
   onOpenAccount,
+  onOpenAdmin,
   currentUser,
   onSelectBankPage, 
   onGoHome,
@@ -132,6 +134,19 @@ export default function Navbar({
           >
             <Database className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
             <span className="hidden lg:inline">{t.historyBtn}</span>
+          </button>
+
+          {/* Admin Control Panel Trigger */}
+          <button
+            onClick={onOpenAdmin}
+            className={`p-2.5 rounded-xl border transition-all ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 border-amber-500/30 text-amber-400' 
+                : 'bg-amber-50 hover:bg-amber-100/80 border-amber-300 text-amber-800'
+            }`}
+            title="Yönetici Paneli (PayTR / LemonSqueezy / Kuponlar / Müşteriler)"
+          >
+            <Settings className="w-4 h-4" />
           </button>
 
           {/* User Account or Login Button */}

@@ -8,6 +8,7 @@ import SecurityModal from './components/SecurityModal';
 import HistoryModal from './components/HistoryModal';
 import AuthModal from './components/AuthModal';
 import AccountDashboardModal from './components/AccountDashboardModal';
+import AdminPanelModal from './components/AdminPanelModal';
 import ProgrammaticSeoDirectory from './components/ProgrammaticSeoDirectory';
 import { SAMPLE_STATEMENTS, parseFinancialContent } from './utils/parserEngine';
 import { generateDocumentHash } from './utils/security';
@@ -24,6 +25,7 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [currentView, setCurrentView] = useState('app');
   const [isProUser, setIsProUser] = useState(() => Boolean(getCurrentUser()?.tier?.includes('pro')));
@@ -113,6 +115,7 @@ export default function App() {
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAccount={() => setIsAccountOpen(true)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
         currentUser={currentUser}
         onSelectBankPage={(view) => setCurrentView(view ? 'seo' : 'app')}
         onGoHome={handleGoHome}
@@ -324,6 +327,13 @@ export default function App() {
         user={currentUser}
         onLogout={handleLogout}
         onOpenPricing={() => setIsPricingOpen(true)}
+        theme={theme}
+        lang={lang}
+      />
+
+      <AdminPanelModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
         theme={theme}
         lang={lang}
       />

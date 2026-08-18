@@ -181,3 +181,64 @@ export function incrementUserStats(txCount = 1) {
 
   saveUserSession(updatedUser);
 }
+
+const ALL_USERS_KEY = 'docufinance_all_registered_users_v1';
+
+export function getAllUsers() {
+  try {
+    const raw = localStorage.getItem(ALL_USERS_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list) && list.length > 0) return list;
+    }
+  } catch (e) {}
+
+  const current = getCurrentUser();
+  const defaultList = [
+    {
+      id: 'usr_corp_1',
+      name: 'Mali Müşavir Can Erdem',
+      email: 'muhasebe@erdem-musavirlik.com',
+      accountType: 'corporate',
+      companyName: 'Erdem & Ortakları Mali Müşavirlik A.Ş.',
+      taxNumber: '4892019482',
+      tier: 'pro_annual',
+      licenseKey: 'DOCUPRO-CANERDEM2026',
+      createdAt: '2026-08-01T10:00:00.000Z'
+    },
+    {
+      id: 'usr_corp_2',
+      name: 'CPA John Reynolds',
+      email: 'cpa@reynolds-advisory.com',
+      accountType: 'corporate',
+      companyName: 'Reynolds & Partners Financial Advisory LLC',
+      taxNumber: 'US-89201948',
+      tier: 'pro_monthly',
+      licenseKey: 'DOCUPRO-REYNOLDS99',
+      createdAt: '2026-08-05T14:30:00.000Z'
+    },
+    {
+      id: 'usr_ind_1',
+      name: 'Ahmet Yılmaz',
+      email: 'ahmet.yilmaz@bireysel.com',
+      accountType: 'individual',
+      companyName: '',
+      taxNumber: '',
+      tier: 'free',
+      licenseKey: null,
+      createdAt: '2026-08-10T09:15:00.000Z'
+    }
+  ];
+
+  if (current && !defaultList.some(u => u.id === current.id || u.email === current.email)) {
+    defaultList.unshift(current);
+  }
+
+  return defaultList;
+}
+
+export function saveAllUsers(users) {
+  try {
+    localStorage.setItem(ALL_USERS_KEY, JSON.stringify(users));
+  } catch (e) {}
+}
