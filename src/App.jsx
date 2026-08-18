@@ -276,6 +276,9 @@ export default function App() {
             <button onClick={() => setIsPricingOpen(true)} className="hover:text-emerald-500 transition-colors">
               {t.pricingBtn}
             </button>
+            <button onClick={() => setIsAdminOpen(true)} className="hover:text-amber-400 text-amber-500/80 transition-colors font-bold">
+              ⚙️ {lang === 'tr' ? 'Yönetici Paneli' : 'Admin Panel'}
+            </button>
           </div>
 
           <div className="flex items-center gap-2 text-slate-400">

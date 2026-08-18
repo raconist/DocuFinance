@@ -507,6 +507,24 @@ Tarih       Açıklama                                    Borç         Alacak  
 Kapanış Bakiyesi: 84.500,00 TL`
   },
 
+  halkbank: {
+    name: 'Türkiye Halk Bankası Kurumsal Hesap',
+    bank: 'Halkbank',
+    region: 'TR',
+    currency: 'TRY',
+    text: `TÜRKIYE HALK BANKASI A.Ş. HESAP ÖZETİ
+Hesap Adı: TİCARİ MEVDUAT HESABI
+Açılış Bakiyesi: 72.000,00 TL
+
+Tarih       İşlem Detayı                                 Borç         Alacak       Bakiye
+02.08.2026  GELEN HAVALE - KURUMSAL DANIŞMANLIK BEDELİ                48.000,00   120.000,00
+06.08.2026  KOSGEB & DESTEK ÖDEMESİ HAKEDİŞ                           15.000,00   135.000,00
+10.08.2026  VERGİ VE SGK PRİM TAHSİLATI                16.800,00                  118.200,00
+14.08.2026  AKARYAKIT VE PERSONEL YOL GİDERİ            2.200,00                  116.000,00
+
+Kapanış Bakiyesi: 116.000,00 TL`
+  },
+
   // --- 🇬🇧 UNITED KINGDOM (BRITISH BANKS) ---
   hsbc_uk: {
     name: 'HSBC UK Commercial Banking (GBP)',

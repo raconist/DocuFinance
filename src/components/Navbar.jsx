@@ -139,14 +139,15 @@ export default function Navbar({
           {/* Admin Control Panel Trigger */}
           <button
             onClick={onOpenAdmin}
-            className={`p-2.5 rounded-xl border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all shadow-sm ${
               isDark 
-                ? 'bg-slate-900 hover:bg-slate-800 border-amber-500/30 text-amber-400' 
-                : 'bg-amber-50 hover:bg-amber-100/80 border-amber-300 text-amber-800'
+                ? 'bg-amber-950/40 hover:bg-amber-900/60 border-amber-500/50 text-amber-300 shadow-amber-500/10' 
+                : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
             }`}
             title="Yönetici Paneli (PayTR / LemonSqueezy / Kuponlar / Müşteriler)"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-4 h-4 text-amber-400 animate-spin-slow" />
+            <span>Admin</span>
           </button>
 
           {/* User Account or Login Button */}
