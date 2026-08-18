@@ -1,7 +1,10 @@
 /**
  * Client-Side Encrypted IndexedDB & Local Storage Manager
- * Stores parsed bank statements and history locally in browser RAM/DB
+ * Stores parsed bank statements locally in browser RAM/DB and syncs to Supabase when configured.
  */
+
+import { syncStatementToCloud } from './supabase';
+import { getCurrentUser } from './authService';
 
 const DB_NAME = 'DocuFinance_LocalDB';
 const DB_VERSION = 1;
@@ -59,6 +62,12 @@ export async function saveStatementToLocalDB(statementData) {
       createdAt: new Date().toISOString()
     };
 
+    // Background sync to Supabase Cloud if user is authenticated
+    const currentUser = getCurrentUser();
+    if (currentUser?.id) {
+      syncStatementToCloud(statementData, currentUser.id).catch(() => {});
+    }
+
     return new Promise((resolve, reject) => {
       const req = store.put(record);
       req.onsuccess = () => resolve(record);
@@ -80,7 +89,6 @@ export async function getAllStatementsFromLocalDB() {
     return new Promise((resolve, reject) => {
       const req = store.getAll();
       req.onsuccess = () => {
-        // Return sorted by newest first
         const records = (req.result || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         resolve(records);
       };
@@ -110,8 +118,8 @@ export async function deleteStatementFromLocalDB(id) {
   }
 }
 
-// Clear all local history
-export async function clearAllStatementsFromLocalDB() {
+// Clear entire history
+export async function clearLocalDB() {
   try {
     const db = await openDatabase();
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -127,3 +135,5 @@ export async function clearAllStatementsFromLocalDB() {
     return false;
   }
 }
+
+export const clearAllStatementsFromLocalDB = clearLocalDB;
