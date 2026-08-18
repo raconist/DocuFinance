@@ -289,10 +289,11 @@ export default function App() {
           setIsProUser(true);
           const current = getCurrentUser();
           if (current) {
-            setCurrentUser({ ...current, tier: plan });
+            setCurrentUser({ ...current });
           }
         }}
         lang={lang}
+        theme={theme}
       />
 
       <SecurityModal
