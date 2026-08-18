@@ -83,20 +83,23 @@ export default function HeroSection({ onSelectSample, onOpenSecurity, lang = 'tr
             {t.regionSelectTitle}
           </p>
 
-          {/* Region Tabs */}
-          <div className={`inline-flex items-center p-1.5 rounded-2xl border text-xs font-semibold ${
+          {/* Region Tabs (Expanded: TR, UK, FR, IT, EU, US, FINTECH) */}
+          <div className={`flex flex-wrap items-center justify-center p-1.5 rounded-2xl border text-xs font-semibold gap-1 ${
             isDark ? 'bg-slate-900 border-white/10' : 'bg-slate-100 border-slate-200'
           }`}>
             {[
               { id: 'TR', label: '🇹🇷 Türkiye' },
-              { id: 'US', label: '🇺🇸 USA' },
-              { id: 'EU', label: '🇪🇺 Europe' },
+              { id: 'UK', label: '🇬🇧 İngiltere (UK)' },
+              { id: 'FR', label: '🇫🇷 Fransa' },
+              { id: 'IT', label: '🇮🇹 İtalya' },
+              { id: 'EU', label: '🇪🇺 Almanya & İsviçre' },
+              { id: 'US', label: '🇺🇸 ABD (USA)' },
               { id: 'FINTECH', label: '🌐 FinTech' }
             ].map(r => (
               <button
                 key={r.id}
                 onClick={() => setSelectedRegion(r.id)}
-                className={`px-3.5 py-1.5 rounded-xl transition-all ${
+                className={`px-3 py-1.5 rounded-xl transition-all ${
                   selectedRegion === r.id 
                     ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-sm' 
                     : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-950'
@@ -114,20 +117,20 @@ export default function HeroSection({ onSelectSample, onOpenSecurity, lang = 'tr
             <button
               key={key}
               onClick={() => onSelectSample(key)}
-              className={`flex items-center gap-3 p-3 rounded-2xl border text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98] group text-left ${
+              className={`flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98] group text-left ${
                 isDark 
                   ? 'bg-slate-900/80 hover:bg-emerald-950/30 border-white/10 hover:border-emerald-500/50 text-slate-200' 
                   : 'bg-white hover:bg-emerald-50/50 border-slate-200 hover:border-emerald-300 text-slate-800 shadow-sm'
               }`}
             >
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
                 isDark ? 'bg-slate-800 group-hover:bg-emerald-500/20' : 'bg-slate-100 group-hover:bg-emerald-100'
               }`}>
                 <Building2 className="w-4 h-4 text-emerald-500" />
               </div>
               <div className="overflow-hidden">
                 <div className={`font-bold truncate ${isDark ? 'text-white' : 'text-slate-950'}`}>{sample.bank}</div>
-                <div className="text-[11px] text-slate-400 font-mono">{sample.currency} Demo</div>
+                <div className="text-[11px] text-slate-400 font-mono">{sample.currency} Ekstre Demo</div>
               </div>
             </button>
           ))}
