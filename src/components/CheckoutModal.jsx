@@ -13,9 +13,10 @@ import {
   FileText, 
   Copy, 
   Receipt,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
-import { validatePromoCode } from '../utils/paymentConfig';
+import { validatePromoCode, getPaymentSettings } from '../utils/paymentConfig';
 import { upgradeUserToPro, getCurrentUser, loginUser } from '../utils/authService';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -484,6 +485,22 @@ export default function CheckoutModal({
                   </button>
                 </div>
               )}
+
+              {/* Direct LemonSqueezy Global Checkout Link */}
+              <div className="pt-2">
+                <a
+                  href={selectedPlan === 'pro_annual' 
+                    ? (getPaymentSettings().lemonsqueezy?.proAnnualUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/944de374-39c3-45a1-bff3-4b4ebfeb8275')
+                    : (getPaymentSettings().lemonsqueezy?.proMonthlyUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/75260f6e-61df-427a-88e3-5af4360a0f9f')
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold transition-all flex items-center justify-center gap-2 text-center"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>{lang === 'tr' ? '🌐 LemonSqueezy ile Doğrudan Güvenli Öde (Apple Pay, PayPal, Kart)' : '🌐 Pay directly via LemonSqueezy (Apple Pay, Card, PayPal)'}</span>
+                </a>
+              </div>
             </>
           )}
 

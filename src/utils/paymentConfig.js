@@ -3,7 +3,7 @@
  * Supports PayTR, Shopier, LemonSqueezy, Stripe, and Direct Bank Transfer (IBAN)
  */
 
-const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v2';
+const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v3';
 const STORAGE_KEY_PROMOS = 'docufinance_admin_promo_codes_v2';
 
 export const DEFAULT_PAYMENT_GATEWAYS = {
@@ -31,10 +31,10 @@ export const DEFAULT_PAYMENT_GATEWAYS = {
     name: 'LemonSqueezy (Global Card, Apple Pay, PayPal & Tax Management)',
     type: 'global',
     enabled: true,
-    storeId: 'docufinance_store',
-    proMonthlyUrl: 'https://docufinance.lemonsqueezy.com/buy/pro-monthly',
-    proAnnualUrl: 'https://docufinance.lemonsqueezy.com/buy/pro-annual',
-    singlePassUrl: 'https://docufinance.lemonsqueezy.com/buy/single-pass'
+    storeId: 'docufinance',
+    proMonthlyUrl: 'https://docufinance.lemonsqueezy.com/checkout/buy/75260f6e-61df-427a-88e3-5af4360a0f9f',
+    proAnnualUrl: 'https://docufinance.lemonsqueezy.com/checkout/buy/944de374-39c3-45a1-bff3-4b4ebfeb8275',
+    singlePassUrl: 'https://docufinance.lemonsqueezy.com/checkout/buy/75260f6e-61df-427a-88e3-5af4360a0f9f'
   },
   // 🏛️ Havale / EFT / FAST (Sıfır Komisyon Doğrudan Banka Transferi)
   bankTransfer: {
