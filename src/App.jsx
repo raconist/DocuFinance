@@ -128,11 +128,11 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-20">
+      <main className="flex-1 pb-20 w-full flex flex-col items-center justify-start">
         
         {/* Error Toast */}
         {errorMessage && (
-          <div className="max-w-3xl mx-auto px-4 pt-6">
+          <div className="w-full max-w-3xl mx-auto px-4 pt-6">
             <div className="p-4 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-300 text-xs sm:text-sm flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-2.5">
                 <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
@@ -150,18 +150,20 @@ export default function App() {
 
         {/* View 1: SEO Directory View */}
         {currentView === 'seo' ? (
-          <ProgrammaticSeoDirectory
-            onTestSample={(sampleKey) => handleSelectSample(sampleKey)}
-            onSelectBank={(bank) => {
-              if (bank.sampleKey) handleSelectSample(bank.sampleKey);
-            }}
-            onGoHome={handleGoHome}
-          />
+          <div className="w-full flex justify-center">
+            <ProgrammaticSeoDirectory
+              onTestSample={(sampleKey) => handleSelectSample(sampleKey)}
+              onSelectBank={(bank) => {
+                if (bank.sampleKey) handleSelectSample(bank.sampleKey);
+              }}
+              onGoHome={handleGoHome}
+            />
+          </div>
         ) : (
           /* View 2: App Core View */
-          <div>
+          <div className="w-full flex flex-col items-center">
             {!parsedData ? (
-              <div className="space-y-8">
+              <div className="w-full flex flex-col items-center space-y-8">
                 <HeroSection
                   onSelectSample={handleSelectSample}
                   onOpenSecurity={() => setIsSecurityOpen(true)}
@@ -179,7 +181,7 @@ export default function App() {
                 />
 
                 {/* Bottom Trust & Feature Highlights */}
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-12">
+                <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-12">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                     
                     <div className={`p-6 rounded-3xl border transition-all ${
