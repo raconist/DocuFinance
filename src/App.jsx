@@ -303,14 +303,6 @@ export default function App() {
             <button onClick={() => setIsPricingOpen(true)} className="hover:text-emerald-500 transition-colors">
               {t.pricingBtn}
             </button>
-            <button 
-              onClick={() => setIsAdminOpen(true)} 
-              className="hover:text-emerald-400 transition-colors opacity-70 hover:opacity-100 flex items-center gap-1"
-              title="Yönetici Girişi (Ctrl+Shift+M)"
-            >
-              <Lock className="w-3 h-3 text-slate-500" />
-              <span>Yönetici</span>
-            </button>
           </div>
 
           <div className="flex items-center gap-2 text-slate-400">
