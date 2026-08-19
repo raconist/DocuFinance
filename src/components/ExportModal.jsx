@@ -41,6 +41,8 @@ export default function ExportModal({
   theme = 'dark',
   lang = 'tr'
 }) {
+  const defaultRegion = lang === 'tr' ? 'TR' : (lang === 'de' || lang === 'fr' || lang === 'it') ? 'EU' : 'US';
+  const [selectedRegion, setSelectedRegion] = useState(defaultRegion); // 'ALL' | 'TR' | 'EU' | 'US' | 'GLOBAL'
   const [selectedFormat, setSelectedFormat] = useState('excel');
   const [isMasked, setIsMasked] = useState(isMaskedDefault);
   const [includeAudit, setIncludeAudit] = useState(true);
@@ -52,8 +54,10 @@ export default function ExportModal({
   const isDark = theme === 'dark';
 
   const EXPORT_FORMATS = [
+    // 📊 GLOBAL & EXCEL
     {
       id: 'excel',
+      region: 'GLOBAL',
       name: 'Microsoft Excel (.xlsx)',
       category: 'Genel & Formüllü',
       badge: 'En Popüler',
@@ -65,6 +69,7 @@ export default function ExportModal({
     },
     {
       id: 'consolidated',
+      region: 'GLOBAL',
       name: 'Konsolide Yıllık Mizan (.xlsx)',
       category: 'Kurumsal & Yıllık',
       badge: 'Çoklu Sekmeli',
@@ -74,8 +79,37 @@ export default function ExportModal({
       description: 'Tüm ekstre satırları, Aylık Gelir-Gider Mizanı ve Banka dağılımını içeren profesyonel Excel kitabı.',
       action: () => exportConsolidatedAnnualLedger(data, { fileName: `Konsolide_Mizan_${bankName}`, isMasked, currency })
     },
+
+    // 🇪🇺 AVRUPA & ALMANYA (EU & DACH)
+    {
+      id: 'datev',
+      region: 'EU',
+      name: 'Alman DATEV (SKR03 / SKR04 CSV)',
+      category: 'Almanya & DACH (Avrupa)',
+      badge: 'DATEV EXTF-700',
+      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      icon: Building2,
+      iconColor: 'text-amber-400',
+      description: 'DATEV Rechnungswesen ve Steuerberater muhasebe yazılımlarına doğrudan aktarılabilir ASCII/CSV Buchungsstapel.',
+      action: () => exportToDatevCSV(data, { fileName: `DATEV_${bankName}`, isMasked })
+    },
+    {
+      id: 'qbo_eu',
+      region: 'EU',
+      name: 'Xero & Sage Europe (.OFX / .QBO)',
+      category: 'Avrupa FinTech',
+      badge: 'Xero Direct Feed',
+      badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+      icon: Globe,
+      iconColor: 'text-cyan-400',
+      description: 'Avrupa ve İngiltere Xero, Sage ve FreeAgent bulut muhasebe programları için doğrudan banka akış dosyası.',
+      action: () => exportToQBO(data, { fileName: `Xero_EU_${bankName}`, isMasked, currency })
+    },
+
+    // 🇺🇸 ABD & GLOBAL (US & UK)
     {
       id: 'qbo',
+      region: 'US',
       name: 'QuickBooks & Xero (.QBO / .OFX)',
       category: 'Global FinTech (US/UK)',
       badge: 'Bank Feed',
@@ -86,20 +120,24 @@ export default function ExportModal({
       action: () => exportToQBO(data, { fileName: `QuickBooks_${bankName}`, isMasked, currency })
     },
     {
-      id: 'datev',
-      name: 'Alman DATEV (SKR03 / SKR04 CSV)',
-      category: 'Almanya & DACH',
-      badge: 'DATEV EXTF-700',
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      icon: Building2,
-      iconColor: 'text-amber-400',
-      description: 'DATEV Rechnungswesen ve Steuerberater muhasebe yazılımlarına doğrudan aktarılabilir ASCII/CSV Buchungsstapel.',
-      action: () => exportToDatevCSV(data, { fileName: `DATEV_${bankName}`, isMasked })
+      id: 'qif',
+      region: 'US',
+      name: 'Quicken & MS Money (.QIF)',
+      category: 'Global FinTech',
+      badge: 'Finansal Akış',
+      badgeColor: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+      icon: Globe,
+      iconColor: 'text-sky-400',
+      description: 'Quicken, GnuCash ve MS Money için standart finansal işlem formatı.',
+      action: () => exportToQIF(data, { fileName: `Quicken_${bankName}`, isMasked })
     },
+
+    // 🇹🇷 TÜRKİYE MUHASEBE & ERP
     {
       id: 'luca',
+      region: 'TR',
       name: 'Luca Muhasebe (CSV)',
-      category: 'Türkiye Muhasebe',
+      category: 'Türkiye Mali Müşavir',
       badge: 'Luca Uyumlu',
       badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       icon: Building2,
@@ -109,6 +147,7 @@ export default function ExportModal({
     },
     {
       id: 'zirve',
+      region: 'TR',
       name: 'Zirve Muhasebe (.xlsx)',
       category: 'Türkiye Muhasebe',
       badge: 'Zirve Banka',
@@ -120,6 +159,7 @@ export default function ExportModal({
     },
     {
       id: 'logo',
+      region: 'TR',
       name: 'Logo Muhasebe (Go/Tiger)',
       category: 'Türkiye ERP',
       badge: 'Logo ERP',
@@ -131,6 +171,7 @@ export default function ExportModal({
     },
     {
       id: 'parasut',
+      region: 'TR',
       name: 'Paraşüt / Bizmu (CSV)',
       category: 'KOBİ & Ön Muhasebe',
       badge: 'Ön Muhasebe',
@@ -140,19 +181,11 @@ export default function ExportModal({
       description: 'Paraşüt ve Bizmu Kasa/Banka hareketleri içe aktarma uyumlu virgül ayrılmış CSV formatı.',
       action: () => exportToParasutCSV(data, { fileName: `Parasut_${bankName}`, isMasked })
     },
-    {
-      id: 'qif',
-      name: 'Quicken & MS Money (.QIF)',
-      category: 'Global FinTech',
-      badge: 'Finansal Akış',
-      badgeColor: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
-      icon: Globe,
-      iconColor: 'text-sky-400',
-      description: 'Quicken, GnuCash ve MS Money için standart finansal işlem formatı.',
-      action: () => exportToQIF(data, { fileName: `Quicken_${bankName}`, isMasked })
-    },
+
+    // 🔧 STANDART CSV & JSON
     {
       id: 'csv',
+      region: 'GLOBAL',
       name: 'Standart UTF-8 CSV (.csv)',
       category: 'Veri Analizi',
       badge: 'Evrensel',
@@ -164,6 +197,7 @@ export default function ExportModal({
     },
     {
       id: 'json',
+      region: 'GLOBAL',
       name: 'Yapılandırılmış JSON (.json)',
       category: 'Yazılım & API',
       badge: 'API Hazır',
@@ -174,6 +208,12 @@ export default function ExportModal({
       action: () => exportToJSON(data, { fileName: `JSON_${bankName}`, isMasked })
     }
   ];
+
+  const filteredFormats = EXPORT_FORMATS.filter(fmt => {
+    if (selectedRegion === 'ALL') return true;
+    if (selectedRegion === 'GLOBAL') return fmt.region === 'GLOBAL';
+    return fmt.region === selectedRegion || fmt.region === 'GLOBAL';
+  });
 
   const handleExecuteExport = () => {
     setIsExporting(true);
@@ -234,14 +274,41 @@ export default function ExportModal({
         {/* Modal Body - Formats Grid */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
+          {/* Regional Filter Tabs */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              🌍 Bölge & Muhasebe Standardı:
+            </span>
+            
+            <div className={`flex flex-wrap items-center p-1 rounded-2xl border text-xs font-semibold gap-1 ${
+              isDark ? 'bg-slate-950 border-white/10' : 'bg-slate-100 border-slate-200'
+            }`}>
+              {[
+                { id: 'ALL', label: '🌍 Tümü' },
+                { id: 'TR', label: '🇹🇷 Türkiye (Luca/Zirve/Logo)' },
+                { id: 'EU', label: '🇪🇺 Avrupa (DATEV/Xero)' },
+                { id: 'US', label: '🇺🇸 ABD & UK (QuickBooks)' },
+                { id: 'GLOBAL', label: '📊 Excel & CSV' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedRegion(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    selectedRegion === tab.id
+                      ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-sm'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Export Format Selector Cards */}
           <div>
-            <label className={`text-xs font-bold uppercase tracking-wider block mb-3 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Hedef Format veya Muhasebe Programı:
-            </label>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {EXPORT_FORMATS.map(fmt => {
+              {filteredFormats.map(fmt => {
                 const Icon = fmt.icon;
                 const isSelected = selectedFormat === fmt.id;
 
