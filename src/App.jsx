@@ -9,12 +9,14 @@ import HistoryModal from './components/HistoryModal';
 import AuthModal from './components/AuthModal';
 import AccountDashboardModal from './components/AccountDashboardModal';
 import AdminPanelModal from './components/AdminPanelModal';
+import RewardedAdModal from './components/RewardedAdModal';
 import ProgrammaticSeoDirectory from './components/ProgrammaticSeoDirectory';
 import SupportWidget from './components/SupportWidget';
 import { SAMPLE_STATEMENTS, parseFinancialContent } from './utils/parserEngine';
 import { generateDocumentHash } from './utils/security';
 import { saveStatementToLocalDB } from './utils/dbStorage';
 import { getCurrentUser, incrementUserStats } from './utils/authService';
+import { isRewardedBonusActive } from './utils/rewardedAdService';
 import { TRANSLATIONS } from './utils/i18n';
 import { ShieldCheck, Heart, FileSpreadsheet, Lock, AlertCircle } from 'lucide-react';
 
@@ -27,9 +29,11 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isRewardedAdOpen, setIsRewardedAdOpen] = useState(false);
+  const [bonusKey, setBonusKey] = useState(0); // for reactivity
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [currentView, setCurrentView] = useState('app');
-  const [isProUser, setIsProUser] = useState(() => Boolean(getCurrentUser()?.tier?.includes('pro')));
+  const [isProUser, setIsProUser] = useState(() => Boolean(getCurrentUser()?.tier?.includes('pro') || isRewardedBonusActive()));
   const [errorMessage, setErrorMessage] = useState(null);
   const [lang, setLang] = useState('tr');
   const [theme, setTheme] = useState('dark');
@@ -138,6 +142,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAccount={() => setIsAccountOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenRewardedAd={() => setIsRewardedAdOpen(true)}
         currentUser={currentUser}
         onSelectBankPage={(view) => setCurrentView(view ? 'seo' : 'app')}
         onGoHome={handleGoHome}
@@ -366,6 +371,17 @@ export default function App() {
       <AdminPanelModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
+        theme={theme}
+        lang={lang}
+      />
+
+      <RewardedAdModal
+        isOpen={isRewardedAdOpen}
+        onClose={() => setIsRewardedAdOpen(false)}
+        onRewardGranted={(bonus) => {
+          setIsProUser(true);
+          setBonusKey(prev => prev + 1);
+        }}
         theme={theme}
         lang={lang}
       />

@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   ShieldCheck, 
   Lock, 
@@ -12,8 +11,11 @@ import {
   Building2,
   ChevronRight,
   LogIn,
-  Settings
+  Settings,
+  Gift,
+  Zap
 } from 'lucide-react';
+import { isRewardedBonusActive, getRemainingBonusTime } from '../utils/rewardedAdService';
 import { TRANSLATIONS } from '../utils/i18n';
 
 export default function Navbar({ 
@@ -23,6 +25,7 @@ export default function Navbar({
   onOpenAuth,
   onOpenAccount,
   onOpenAdmin,
+  onOpenRewardedAd,
   currentUser,
   onSelectBankPage, 
   onGoHome,
@@ -180,6 +183,33 @@ export default function Navbar({
             >
               <LogIn className="w-4 h-4 text-emerald-500" />
               <span>{t.loginBtn}</span>
+            </button>
+          )}
+
+          {/* Rewarded Ad 2X Bonus Booster Button (For Free Users) */}
+          {!isPro && (
+            <button
+              onClick={onOpenRewardedAd}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
+                isRewardedBonusActive()
+                  ? 'bg-amber-950/50 border-amber-500/50 text-amber-300 animate-pulse'
+                  : 'bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 hover:from-amber-400 font-extrabold hover:scale-105'
+              }`}
+              title="10 saniyelik video izle, 24 saat 2X kota ve AI CFO kazan!"
+            >
+              {isRewardedBonusActive() ? (
+                <>
+                  <Zap className="w-3.5 h-3.5 text-amber-400 fill-current" />
+                  <span className="hidden md:inline">2X Aktif ({getRemainingBonusTime() || '24s'})</span>
+                  <span className="md:hidden">2X Aktif</span>
+                </>
+              ) : (
+                <>
+                  <Gift className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">🎁 2X Bonus Kazan</span>
+                  <span className="md:hidden">2X Bonus</span>
+                </>
+              )}
             </button>
           )}
 
