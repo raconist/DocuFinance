@@ -30,13 +30,24 @@ export default function SupportWidget({ theme = 'dark', lang = 'tr' }) {
     e.preventDefault();
     const topicObj = currentTopics.find(t => t.id === selectedTopic) || currentTopics[0];
     const fullMessage = customNote.trim() 
-      ? `${topicObj.msg}\n\nNotum: ${customNote.trim()}`
+      ? `${topicObj.msg}\n\nDetay / Not: ${customNote.trim()}`
       : topicObj.msg;
 
     const encoded = encodeURIComponent(fullMessage);
-    // WhatsApp Direct Link (Opens app or web)
-    const phone = '905551234567'; // Owner can customize in admin
-    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+    // WhatsApp direct action (+90 541 891 2453)
+    const phone = '905418912453';
+    window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+    setIsOpen(false);
+  };
+
+  const handleSendEmail = (e) => {
+    e.preventDefault();
+    const topicObj = currentTopics.find(t => t.id === selectedTopic) || currentTopics[0];
+    const subject = encodeURIComponent(`DocuFinance Destek: ${topicObj.label}`);
+    const body = encodeURIComponent(
+      `${topicObj.msg}\n\nDetay / Not: ${customNote.trim()}\n\n---\nGönderildiği Yer: DocuFinance Web Platformu`
+    );
+    window.location.href = `mailto:recep.adnc@gmail.com?subject=${subject}&body=${body}`;
     setIsOpen(false);
   };
 
@@ -130,17 +141,28 @@ export default function SupportWidget({ theme = 'dark', lang = 'tr' }) {
               />
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>{lang === 'tr' ? 'WhatsApp ile Hemen İletişime Geç' : 'Chat on WhatsApp'}</span>
-            </button>
+            <div className="space-y-2 pt-1">
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-slate-950" />
+                <span>{lang === 'tr' ? 'WhatsApp ile Hemen İletişime Geç' : 'Chat on WhatsApp'}</span>
+              </button>
 
-            <div className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={handleSendEmail}
+                className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              >
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{lang === 'tr' ? 'E-Posta / Destek Talebi Gönder' : 'Send Email Ticket'}</span>
+              </button>
+            </div>
+
+            <div className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1 pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>7/24 Teknik & Entegrasyon Desteği</span>
+              <span>7/24 Teknik & Mali Müşavir Destek Hattı</span>
             </div>
           </form>
 
