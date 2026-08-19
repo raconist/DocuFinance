@@ -332,7 +332,7 @@ export default function CheckoutModal({
                     </div>
 
                     <p className="text-xs text-slate-300 leading-relaxed">
-                      Tüm yerli ve yabancı <strong>Visa, Mastercard, Troy</strong> kartları ve <strong>12 Aya Varan Taksit</strong> imkanıyla resmi Shopier ödeme sayfası üzerinden güvenle ödeyin.
+                      Tüm yerli ve yabancı <strong>Visa, Mastercard, Troy</strong> kartları ve <strong>3 Taksit İmkanı</strong> ile resmi Shopier ödeme sayfası üzerinden güvenle ödeyin.
                     </p>
 
                     <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-slate-400 font-mono">
