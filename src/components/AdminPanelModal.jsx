@@ -187,6 +187,27 @@ export default function AdminPanelModal({
     savePromoCodes(updated);
   };
 
+  const handleGenerateDiscountKey = (discountPercent) => {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code = `DOCU-${discountPercent}-${randomSuffix}`;
+    const updated = {
+      ...promoCodes,
+      [code]: {
+        code,
+        discountPercent: Number(discountPercent),
+        description: `%${discountPercent} Özel İndirim Key'i`,
+        active: true,
+        usageCount: 0
+      }
+    };
+    setPromoCodes(updated);
+    savePromoCodes(updated);
+    navigator.clipboard.writeText(code);
+    confetti({ particleCount: 50, spread: 45 });
+    setSaveToast(`'${code}' key'i başarıyla üretildi ve panoya kopyalandı!`);
+    setTimeout(() => setSaveToast(null), 3500);
+  };
+
   const handleGenerateLicenseKey = () => {
     const key = `DOCUPRO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     setGeneratedLicense(key);
@@ -699,17 +720,73 @@ export default function AdminPanelModal({
             </form>
           )}
 
-          {/* TAB 3: PROMO CODES */}
+          {/* TAB 3: PROMO CODES & KEY GENERATOR */}
           {activeTab === 'promos' && (
             <div className="space-y-6">
               
+              {/* 1-Click Instant Discount Key Generator */}
+              <div className={`p-5 rounded-2xl border space-y-4 ${
+                isDark ? 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-teal-950/30 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-sm">
+                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                    <span>Tek Tıkla Yeni İndirim Key'i Üret & Kopyala</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-400">Anında aktif olur ve panoya kopyalanır</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDiscountKey(20)}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-emerald-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <span>🎲 %20 Key Üret</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDiscountKey(30)}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-cyan-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <span>🎲 %30 Key Üret</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDiscountKey(50)}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-amber-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <span>🔥 %50 Key Üret</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDiscountKey(75)}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-purple-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <span>💎 %75 Key Üret</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDiscountKey(100)}
+                    className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md col-span-2 sm:col-span-1"
+                  >
+                    <span>👑 %100 Ücretsiz</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Full Pro License Key Generator */}
               <div className={`p-5 rounded-2xl border space-y-3 ${
-                isDark ? 'bg-gradient-to-r from-amber-950/40 to-slate-900 border-amber-500/30' : 'bg-amber-50 border-amber-300'
+                isDark ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
                     <Key className="w-4 h-4" />
-                    <span>Tek Tıkla Pro Lisans Anahtarı Üret</span>
+                    <span>Özel Pro Lisans Key'i Üret</span>
                   </div>
                   <button
                     onClick={handleGenerateLicenseKey}

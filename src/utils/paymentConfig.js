@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v5';
-const STORAGE_KEY_PROMOS = 'docufinance_admin_promo_codes_v2';
+const STORAGE_KEY_PROMOS = 'docufinance_admin_promo_codes_v3';
 
 export const DEFAULT_PAYMENT_GATEWAYS = {
   // 🇹🇷 Türkiye: PayTR (En düşük oranlı şahıs/şirket Sanal POS)
@@ -50,29 +50,7 @@ export const DEFAULT_PAYMENT_GATEWAYS = {
 
 export const PAYMENT_GATEWAYS = DEFAULT_PAYMENT_GATEWAYS;
 
-export const DEFAULT_PROMOS = {
-  LAUNCH50: {
-    code: 'LAUNCH50',
-    discountPercent: 50,
-    description: '%50 Lansman İndirimi',
-    active: true,
-    usageCount: 42
-  },
-  DOCU2026: {
-    code: 'DOCU2026',
-    discountPercent: 30,
-    description: '%30 Özel Yıl Dönümü İndirimi',
-    active: true,
-    usageCount: 18
-  },
-  MUHASEBE100: {
-    code: 'MUHASEBE100',
-    discountPercent: 100,
-    description: '1 Ay Ücretsiz Tam Pro Erişim (Mali Müşavir Özel)',
-    active: true,
-    usageCount: 89
-  }
-};
+export const DEFAULT_PROMOS = {};
 
 // Get active payment settings
 export function getPaymentSettings() {

@@ -264,7 +264,7 @@ export default function CheckoutModal({
                   type="text"
                   value={promoCodeInput}
                   onChange={(e) => setPromoCodeInput(e.target.value)}
-                  placeholder={lang === 'tr' ? 'İndirim Kuponu (Örn: LAUNCH50)' : 'Promo Code (e.g. LAUNCH50)'}
+                  placeholder={t.promoPlaceholder}
                   className={`flex-1 px-4 py-2.5 rounded-xl border text-xs uppercase font-mono font-bold focus:outline-none focus:border-emerald-500 ${
                     isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
                   }`}
