@@ -452,20 +452,21 @@ export default function CheckoutModal({
                   <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/10 space-y-2">
                     <div className="flex justify-between items-center text-slate-400">
                       <span>Banka:</span>
-                      <strong className="text-white">Garanti BBVA A.Ş.</strong>
+                      <strong className="text-white">{getPaymentSettings().bankTransfer?.bankName || 'Türk Ekonomi Bankası (TEB)'}</strong>
                     </div>
                     <div className="flex justify-between items-center text-slate-400">
                       <span>Alıcı:</span>
-                      <strong className="text-white">DocuFinance Yazılım A.Ş.</strong>
+                      <strong className="text-white">{getPaymentSettings().bankTransfer?.accountHolder || 'Recep Yıldız / DocuFinance AI'}</strong>
                     </div>
                     <div className="flex justify-between items-center text-slate-400">
                       <span>IBAN:</span>
                       <div className="flex items-center gap-1.5 font-mono text-emerald-400 font-bold">
-                        <span>TR45 0006 2000 0001 2345 6789 01</span>
+                        <span>{getPaymentSettings().bankTransfer?.iban || 'TR02 0003 2000 0000 0088 0175 88'}</span>
                         <button
                           type="button"
-                          onClick={() => handleCopyIban('TR450006200000012345678901')}
+                          onClick={() => handleCopyIban(getPaymentSettings().bankTransfer?.iban?.replace(/\s+/g, '') || '')}
                           className="p-1 hover:text-white"
+                          title="IBAN Kopyala"
                         >
                           {copiedIban ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
@@ -486,21 +487,41 @@ export default function CheckoutModal({
                 </div>
               )}
 
-              {/* Direct LemonSqueezy Global Checkout Link */}
-              <div className="pt-2">
-                <a
-                  href={selectedPlan === 'pro_annual' 
-                    ? (getPaymentSettings().lemonsqueezy?.proAnnualUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/944de374-39c3-45a1-bff3-4b4ebfeb8275')
-                    : (getPaymentSettings().lemonsqueezy?.proMonthlyUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/75260f6e-61df-427a-88e3-5af4360a0f9f')
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold transition-all flex items-center justify-center gap-2 text-center"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>{lang === 'tr' ? '🌐 LemonSqueezy ile Doğrudan Güvenli Öde (Apple Pay, PayPal, Kart)' : '🌐 Pay directly via LemonSqueezy (Apple Pay, Card, PayPal)'}</span>
-                </a>
-              </div>
+              {/* Direct Shopier Checkout Button for Turkish Lira */}
+              {(currencyMode === 'TRY' || lang === 'tr') && (
+                <div className="pt-2">
+                  <a
+                    href={selectedPlan === 'pro_annual' 
+                      ? (getPaymentSettings().shopier?.proAnnualUrl || 'https://shopier.com/docufinance_pro_yillik')
+                      : (getPaymentSettings().shopier?.proMonthlyUrl || 'https://shopier.com/docufinance_pro_aylik')
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/40 text-orange-300 text-xs font-bold transition-all flex items-center justify-center gap-2 text-center"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>🇹🇷 Shopier ile Güvenli Kartla Öde (Taksit & Anında Aktivasyon)</span>
+                  </a>
+                </div>
+              )}
+
+              {/* Direct Global Checkout Link */}
+              {(currencyMode === 'USD' || currencyMode === 'EUR' || lang !== 'tr') && (
+                <div className="pt-2">
+                  <a
+                    href={selectedPlan === 'pro_annual' 
+                      ? (getPaymentSettings().lemonsqueezy?.proAnnualUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/944de374-39c3-45a1-bff3-4b4ebfeb8275')
+                      : (getPaymentSettings().lemonsqueezy?.proMonthlyUrl || 'https://docufinance.lemonsqueezy.com/checkout/buy/75260f6e-61df-427a-88e3-5af4360a0f9f')
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold transition-all flex items-center justify-center gap-2 text-center"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>🌐 Pay directly via Global Checkout (Apple Pay, Card, PayPal)</span>
+                  </a>
+                </div>
+              )}
             </>
           )}
 

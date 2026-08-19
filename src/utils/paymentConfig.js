@@ -3,7 +3,7 @@
  * Supports PayTR, Shopier, LemonSqueezy, Stripe, and Direct Bank Transfer (IBAN)
  */
 
-const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v3';
+const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v4';
 const STORAGE_KEY_PROMOS = 'docufinance_admin_promo_codes_v2';
 
 export const DEFAULT_PAYMENT_GATEWAYS = {
@@ -26,9 +26,9 @@ export const DEFAULT_PAYMENT_GATEWAYS = {
     proAnnualUrl: 'https://shopier.com/docufinance_pro_yillik',
     singlePassUrl: 'https://shopier.com/docufinance_tek_seferlik'
   },
-  // 🌐 Global / Yurt Dışı: LemonSqueezy (Yetkili Satıcı - MoR - Türkiye'ye Yasal Para Girişi)
+  // 🌐 Global / Yurt Dışı: LemonSqueezy / Paddle (Yetkili Satıcı - MoR - Türkiye'ye Yasal Para Girişi)
   lemonsqueezy: {
-    name: 'LemonSqueezy (Global Card, Apple Pay, PayPal & Tax Management)',
+    name: 'LemonSqueezy / Paddle (Global Card, Apple Pay, PayPal & Tax Management)',
     type: 'global',
     enabled: true,
     storeId: 'docufinance',
@@ -41,10 +41,10 @@ export const DEFAULT_PAYMENT_GATEWAYS = {
     name: 'Banka Havale / EFT / FAST',
     type: 'local',
     enabled: true,
-    bankName: 'Garanti BBVA A.Ş.',
-    accountHolder: 'DocuFinance AI FinTeknoloji',
-    iban: 'TR45 0006 2000 0001 2345 6789 01',
-    branchCode: '6298'
+    bankName: 'Türk Ekonomi Bankası (TEB)',
+    accountHolder: 'Recep Yıldız / DocuFinance AI',
+    iban: 'TR02 0003 2000 0000 0088 0175 88',
+    branchCode: '0032'
   }
 };
 
