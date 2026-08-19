@@ -25,7 +25,9 @@ import {
   exportToQBO, 
   exportToQIF, 
   exportToCSV, 
-  exportToJSON 
+  exportToJSON,
+  exportToDatevCSV,
+  exportConsolidatedAnnualLedger
 } from '../utils/exportEngine';
 import confetti from 'canvas-confetti';
 
@@ -60,6 +62,39 @@ export default function ExportModal({
       iconColor: 'text-emerald-400',
       description: 'Formüllü, otomatik sütun genişlikli ve detaylı mutabakat özet sayfalı Excel tablosu.',
       action: () => exportToExcel(data, { fileName: `${bankName}_Rapor`, isMasked, includeAuditSheet: includeAudit, currency })
+    },
+    {
+      id: 'consolidated',
+      name: 'Konsolide Yıllık Mizan (.xlsx)',
+      category: 'Kurumsal & Yıllık',
+      badge: 'Çoklu Sekmeli',
+      badgeColor: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+      icon: Layers,
+      iconColor: 'text-teal-400',
+      description: 'Tüm ekstre satırları, Aylık Gelir-Gider Mizanı ve Banka dağılımını içeren profesyonel Excel kitabı.',
+      action: () => exportConsolidatedAnnualLedger(data, { fileName: `Konsolide_Mizan_${bankName}`, isMasked, currency })
+    },
+    {
+      id: 'qbo',
+      name: 'QuickBooks & Xero (.QBO / .OFX)',
+      category: 'Global FinTech (US/UK)',
+      badge: 'Bank Feed',
+      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      icon: Globe,
+      iconColor: 'text-purple-400',
+      description: 'QuickBooks Online/Desktop, Xero, Wave ve FreshBooks için uluslararası Open Financial Exchange banka akışı.',
+      action: () => exportToQBO(data, { fileName: `QuickBooks_${bankName}`, isMasked, currency })
+    },
+    {
+      id: 'datev',
+      name: 'Alman DATEV (SKR03 / SKR04 CSV)',
+      category: 'Almanya & DACH',
+      badge: 'DATEV EXTF-700',
+      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      icon: Building2,
+      iconColor: 'text-amber-400',
+      description: 'DATEV Rechnungswesen ve Steuerberater muhasebe yazılımlarına doğrudan aktarılabilir ASCII/CSV Buchungsstapel.',
+      action: () => exportToDatevCSV(data, { fileName: `DATEV_${bankName}`, isMasked })
     },
     {
       id: 'luca',
@@ -104,17 +139,6 @@ export default function ExportModal({
       iconColor: 'text-teal-400',
       description: 'Paraşüt ve Bizmu Kasa/Banka hareketleri içe aktarma uyumlu virgül ayrılmış CSV formatı.',
       action: () => exportToParasutCSV(data, { fileName: `Parasut_${bankName}`, isMasked })
-    },
-    {
-      id: 'qbo',
-      name: 'QuickBooks & Xero (.QBO / .OFX)',
-      category: 'Global FinTech',
-      badge: 'Bank Feed',
-      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      icon: Globe,
-      iconColor: 'text-purple-400',
-      description: 'QuickBooks Online/Desktop, Xero ve Wave için uluslararası Open Financial Exchange banka akışı.',
-      action: () => exportToQBO(data, { fileName: `QuickBooks_${bankName}`, isMasked, currency })
     },
     {
       id: 'qif',
