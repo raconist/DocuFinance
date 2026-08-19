@@ -103,20 +103,20 @@ export function registerUser({ email, password, name, accountType = 'corporate',
 /**
  * Login user with email & password
  */
-export function loginUser({ email, password }) {
+export function loginUser({ email, password, companyName = '', taxNumber = '' }) {
   const current = getCurrentUser();
   if (current && current.email === email.trim().toLowerCase()) {
     return current;
   }
 
-  // Create session if first time or demo
+  // Create clean initial session with 0 processed count
   const user = {
     id: 'usr_' + Date.now(),
     email: email.trim().toLowerCase(),
     name: email.split('@')[0],
-    accountType: 'corporate',
-    companyName: 'DocuFinance Müşavir A.Ş.',
-    taxNumber: '1234567890',
+    accountType: companyName ? 'corporate' : 'individual',
+    companyName: companyName || email.split('@')[0],
+    taxNumber: taxNumber || '',
     tier: 'free',
     subscription: {
       plan: 'free',
@@ -125,9 +125,9 @@ export function loginUser({ email, password }) {
       renewDate: null
     },
     stats: {
-      totalParsedStatements: 3,
-      totalTransactionsProcessed: 142,
-      hoursSaved: 4.5
+      totalParsedStatements: 0,
+      totalTransactionsProcessed: 0,
+      hoursSaved: 0
     },
     createdAt: new Date().toISOString()
   };

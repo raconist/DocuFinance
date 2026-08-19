@@ -157,7 +157,7 @@ export default function AccountDashboardModal({
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <span className="text-xl font-extrabold font-mono text-white block">
-                  {user.stats?.statementsParsed || 12}
+                  {user.stats?.totalParsedStatements ?? 0}
                 </span>
                 <span className="text-[11px] text-slate-400">{t.statsParsedStatements} ({t.unitsCount})</span>
               </div>
@@ -167,7 +167,7 @@ export default function AccountDashboardModal({
                   <Receipt className="w-5 h-5" />
                 </div>
                 <span className="text-xl font-extrabold font-mono text-emerald-400 block">
-                  {user.stats?.rowsProcessed || 1480}
+                  {user.stats?.totalTransactionsProcessed ?? 0}
                 </span>
                 <span className="text-[11px] text-slate-400">{t.statsProcessedRows} ({t.rowsUnit})</span>
               </div>
@@ -177,9 +177,9 @@ export default function AccountDashboardModal({
                   <Clock className="w-5 h-5" />
                 </div>
                 <span className="text-xl font-extrabold font-mono text-amber-400 block">
-                  ~{user.stats?.savedHours || 14.5} {t.hoursUnit}
+                  ~{user.stats?.hoursSaved ?? 0} {t.hoursUnit}
                 </span>
-                <span className="text-[11px] text-slate-400">{t.statsSavedHours}</span>
+                <span className="text-[11px] text-slate-400">{t.statsSavedTime}</span>
               </div>
             </div>
           </div>
