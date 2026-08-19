@@ -56,6 +56,9 @@ export const DEFAULT_ACCOUNTING_RULES = [
  * Get user custom rules merged with default rules
  */
 export function getAccountingRules() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return DEFAULT_ACCOUNTING_RULES;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_RULES);
     if (raw) {
@@ -73,7 +76,8 @@ export function getAccountingRules() {
 /**
  * Save user custom rules
  */
-export function saveCustomRules(customRules) {
+export function saveCustomRules(customRules = []) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
   try {
     localStorage.setItem(STORAGE_KEY_CUSTOM_RULES, JSON.stringify(customRules));
   } catch (e) {
