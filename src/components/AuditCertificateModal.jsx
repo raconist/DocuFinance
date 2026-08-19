@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   Printer, 
@@ -7,9 +7,11 @@ import {
   CheckCircle2, 
   Building2, 
   FileCheck2,
-  Lock
+  Lock,
+  UserCheck
 } from 'lucide-react';
 import { formatCurrency } from '../utils/parserEngine';
+import { getCurrentUser } from '../utils/authService';
 
 export default function AuditCertificateModal({ 
   isOpen, 
@@ -20,6 +22,14 @@ export default function AuditCertificateModal({
   lang = 'tr' 
 }) {
   if (!isOpen || !data) return null;
+
+  const currentUser = getCurrentUser();
+  const [customCompanyName, setCustomCompanyName] = useState(
+    currentUser?.companyName || currentUser?.name || data?.meta?.companyName || 'Kurumsal Mükellef'
+  );
+  const [customTaxNumber, setCustomTaxNumber] = useState(
+    currentUser?.taxNumber || data?.meta?.taxNumber || ''
+  );
 
   const isDark = theme === 'dark';
   const meta = data.meta || {};
@@ -99,6 +109,33 @@ export default function AuditCertificateModal({
             <div className="text-right text-xs text-slate-600 font-mono">
               <div>Rapor No: <strong>DOCU-AUD-{Date.now().toString().slice(-6)}</strong></div>
               <div>Tarih: {new Date().toLocaleDateString('tr-TR')}</div>
+            </div>
+          </div>
+
+          {/* Company & Tax Identification Badge */}
+          <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200 text-xs grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <span className="text-slate-500 block font-medium flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Mükellef / Şirket Ünvanı:</span>
+              </span>
+              <input
+                type="text"
+                value={customCompanyName}
+                onChange={(e) => setCustomCompanyName(e.target.value)}
+                className="font-extrabold text-sm text-slate-900 bg-transparent border-b border-dashed border-emerald-300 w-full focus:outline-none focus:border-emerald-600 pt-0.5"
+                placeholder="Şirket Ünvanı Giriniz"
+              />
+            </div>
+            <div>
+              <span className="text-slate-500 block font-medium">Vergi Kimlik No (VKN / TCKN):</span>
+              <input
+                type="text"
+                value={customTaxNumber}
+                onChange={(e) => setCustomTaxNumber(e.target.value)}
+                className="font-bold text-slate-800 font-mono bg-transparent border-b border-dashed border-emerald-300 w-full focus:outline-none focus:border-emerald-600 pt-0.5"
+                placeholder="10 veya 11 Haneli VKN / TCKN"
+              />
             </div>
           </div>
 

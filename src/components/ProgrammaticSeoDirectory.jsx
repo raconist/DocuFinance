@@ -3,7 +3,105 @@ import { Building2, FileSpreadsheet, ArrowRight, ShieldCheck, HelpCircle, CheckC
 import { SAMPLE_STATEMENTS } from '../utils/parserEngine';
 
 export const BANK_SEO_DATA = [
-  // --- 🇹🇷 TÜRKİYE ---
+  // --- 🇹🇷 MUHASEBE PROGRAMI & VERGİ ENTEGRASYONLARI ---
+  {
+    id: 'luca_aktarim',
+    title: 'Luca Muhasebe Banka Ekstresi ve Fiş Aktarımı (XML/CSV)',
+    slug: 'luca-ekstre-fis-aktarim-programi',
+    bank: 'Luca Mali Müşavir Paketi',
+    region: '🇹🇷 Türkiye',
+    searchKeyword: 'luca ekstre fiş aktarım programı excel xml',
+    description: 'Tüm bankaların PDF ekstrelerini 2 saniyede Luca Muhasebe sistemine doğrudan aktarılabilir Yevmiye Fişi ve Borç/Alacak dengeli Excel formatına dönüştürün.',
+    sampleKey: 'garanti',
+    faq: [
+      { q: 'Luca formatında borç ve alacak hesap kodları otomatik gelir mi?', a: 'Evet, 150+ TDHP kuralı ile 102, 770, 320 ve 600 hesap kodları otomatik doldurulur.' },
+      { q: 'Toplu 12 aylık ekstreler Luca\'ya tek seferde aktarılabilir mi?', a: 'Evet, 50 adede kadar PDF tek seferde yüklenip konsolide Luca fişine dönüştürülebilir.' }
+    ]
+  },
+  {
+    id: 'zirve_aktarim',
+    title: 'Zirve Muhasebe Banka Ekstresi Excel ve Fiş Aktarımı',
+    slug: 'zirve-ekstre-excel-aktarma',
+    bank: 'Zirve Yazılım',
+    region: '🇹🇷 Türkiye',
+    searchKeyword: 'zirve finansman ekstre excel aktarma fiş oluşturma',
+    description: 'Zirve Müşavir ve Finansman programları için PDF banka ekstrelerini formüllü Excel fiş aktarım şablonuna çevirin.',
+    sampleKey: 'isbankasi',
+    faq: [
+      { q: 'Zirve Fiş Aktarım Excel şablonu ile birebir uyumlu mudur?', a: 'Evet, Zirve\'nin beklediği Tarih, Fiş No, Hesap Kodu, Borç ve Alacak sütun yapısıyla %100 uyumludur.' }
+    ]
+  },
+  {
+    id: 'logo_aktarim',
+    title: 'Logo GO 3 / Tiger Banka Ekstresi Aktarım Motoru',
+    slug: 'logo-banka-ekstresi-aktarma',
+    bank: 'Logo Yazılım',
+    region: '🇹🇷 Türkiye',
+    searchKeyword: 'logo go3 tiger banka ekstresi excel aktarım',
+    description: 'Logo muhasebe programları için banka hareketlerini otomatik TDHP kodlarıyla eşleştirip Excel ve XML fiş dökümü alın.',
+    sampleKey: 'garanti',
+    faq: [
+      { q: 'Logo banka fişi oluştururken virman ve havaleler ayrışır mı?', a: 'Evet, gelen ve giden transferler ayrı Borç/Alacak satırları olarak dengeli üretilir.' }
+    ]
+  },
+  {
+    id: 'kdv_simulator',
+    title: 'Otomatik KDV, Geçici Vergi ve Stopaj Hesaplama Aracı',
+    slug: 'muhasebe-kdv-hesaplama-ve-ekstre-aktarma',
+    bank: 'Gelir İdaresi (GİB)',
+    region: '🇹🇷 Türkiye',
+    searchKeyword: 'aylık tahmini kdv hesaplama gelir gider stopaj',
+    description: 'Banka ekstrelerinizdeki ve faturalarınızdaki gelir/gider dengesinden bu ay çıkacak tahmini KDV ve Geçici Vergi tutarını anında hesaplayın.',
+    sampleKey: 'garanti',
+    faq: [
+      { q: 'Hesaplanan KDV ve İndirilecek KDV nasıl hesaplanır?', a: 'Giderlerinizdeki %20/%10 KDV ile satışlarınızdaki KDV karşılaştırılarak net ödenecek KDV bulunur.' }
+    ]
+  },
+  {
+    id: 'e_fatura_kdv',
+    title: 'GİB e-Fatura & e-Arşiv XML İndirilecek KDV Listesi Çıkarma',
+    slug: 'e-fatura-indirilecek-kdv-listesi-cikarma',
+    bank: 'GİB e-Fatura / e-Arşiv',
+    region: '🇹🇷 Türkiye',
+    searchKeyword: 'gib e fatura xml indirilecek kdv listesi excel ba bs',
+    description: 'Yüzlerce e-Fatura ve e-Arşiv XML dosyasını tek tıkla GİB formatında İndirilecek KDV Listesi ve Ba-Bs mutabakat tablosuna dönüştürün.',
+    sampleKey: 'garanti',
+    faq: [
+      { q: 'KDV Tevkifatı ve matrah ayrıştırması yapılıyor mu?', a: 'Evet, XML içerisindeki matrah, vergi oranı, KDV tutarı ve tevkifat otomatik listelenir.' }
+    ]
+  },
+
+  // --- 🇩🇪 GERMANY & DATEV ---
+  {
+    id: 'datev_konverter',
+    title: 'DATEV Bank-Buchungsstapel Konverter (SKR03 / SKR04)',
+    slug: 'datev-bank-buchungen-konvertieren',
+    bank: 'DATEV eG (Germany)',
+    region: '🇩🇪 Deutschland',
+    searchKeyword: 'DATEV bank buchungsstapel ascii csv konvertieren skr03 skr04',
+    description: 'Konvertieren Sie PDF-Kontoauszüge aller deutschen Banken direkt in das offizielle DATEV Buchungsstapel-Format (ASCII/CSV).',
+    sampleKey: 'deutschebank',
+    faq: [
+      { q: 'Ist das Format kompatibel mit DATEV Rechnungswesen?', a: 'Ja, die generierten CSV/ASCII-Dateien folgen den offiziellen DATEV EXTF-700 Spezifikationen.' }
+    ]
+  },
+
+  // --- 🇺🇸 GLOBAL & QUICKBOOKS / XERO ---
+  {
+    id: 'quickbooks_qbo',
+    title: 'PDF Bank Statement to QuickBooks (.QBO) & Xero Converter',
+    slug: 'quickbooks-bank-statement-converter',
+    bank: 'QuickBooks & Xero',
+    region: '🇺🇸 Global (USA/UK)',
+    searchKeyword: 'convert PDF bank statement to QuickBooks QBO OFX Xero CSV',
+    description: 'Transform unscannable or multi-page bank PDF statements into native QuickBooks Web Connect (.QBO) and Xero CSV files with 100% balance reconciliation.',
+    sampleKey: 'chase',
+    faq: [
+      { q: 'Does QuickBooks Online accept these files?', a: 'Yes, .QBO (OFX) is the native direct import format supported by all QuickBooks desktop and online versions.' }
+    ]
+  },
+
+  // --- 🇹🇷 TÜRKİYE BANKALARI ---
   {
     id: 'garanti',
     title: 'Garanti BBVA PDF Ekstre Excel (.xlsx) Çevirme',

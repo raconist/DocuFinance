@@ -45,6 +45,8 @@ import RulesModal from './RulesModal';
 import ReconciliationModal from './ReconciliationModal';
 import AuditCertificateModal from './AuditCertificateModal';
 import CfoAnalyticsModal from './CfoAnalyticsModal';
+import TaxEstimatorModal from './TaxEstimatorModal';
+import JournalEntryModal from './JournalEntryModal';
 import { categorizeTransactions } from '../utils/accountingRules';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -75,6 +77,8 @@ export default function DataStudio({
   const [isReconciliationOpen, setIsReconciliationOpen] = useState(false);
   const [isAuditCertificateOpen, setIsAuditCertificateOpen] = useState(false);
   const [isCfoModalOpen, setIsCfoModalOpen] = useState(false);
+  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
 
   // Row Selection for Bulk Actions
   const [selectedRowIds, setSelectedRowIds] = useState(new Set());
@@ -342,20 +346,36 @@ export default function DataStudio({
           {/* AI CFO & Cash Flow Analytics */}
           <button
             onClick={() => setIsCfoModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02]"
           >
             <PieChart className="w-4 h-4" />
-            <span>📊 AI CFO & Nakit Akışı</span>
+            <span>📊 AI CFO</span>
+          </button>
+
+          {/* Tax & VAT Simulator */}
+          <button
+            onClick={() => setIsTaxModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-extrabold text-xs border border-amber-500/30 transition-all shadow-sm hover:scale-[1.02]"
+          >
+            <span>🧮 Vergi & KDV</span>
+          </button>
+
+          {/* Balanced Journal Voucher */}
+          <button
+            onClick={() => setIsJournalModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-extrabold text-xs border border-cyan-500/30 transition-all shadow-sm hover:scale-[1.02]"
+          >
+            <span>📑 Yevmiye Fişi</span>
           </button>
 
           {/* 1-Click Auto Categorize */}
           <button
             onClick={handleAutoCategorize}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 text-slate-950 text-xs font-extrabold shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 text-slate-950 text-xs font-extrabold shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
             title="150+ TDHP/GAAP Kuralı ile tek tıkla hesap kodu atar"
           >
             <Sparkles className="w-4 h-4" />
-            <span>🧠 Akıllı Muhasebeleştir</span>
+            <span>🧠 Muhasebeleştir</span>
           </button>
 
           {/* Cross Reconciliation Tool */}
@@ -938,6 +958,24 @@ export default function DataStudio({
       <CfoAnalyticsModal
         isOpen={isCfoModalOpen}
         onClose={() => setIsCfoModalOpen(false)}
+        transactions={data.rows || []}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* Tax & VAT Estimator Modal */}
+      <TaxEstimatorModal
+        isOpen={isTaxModalOpen}
+        onClose={() => setIsTaxModalOpen(false)}
+        transactions={data.rows || []}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* Balanced Journal Entry Voucher Modal */}
+      <JournalEntryModal
+        isOpen={isJournalModalOpen}
+        onClose={() => setIsJournalModalOpen(false)}
         transactions={data.rows || []}
         theme={theme}
         lang={lang}
