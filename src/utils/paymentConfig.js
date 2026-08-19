@@ -80,17 +80,27 @@ export function savePromoCodes(promos) {
   localStorage.setItem(STORAGE_KEY_PROMOS, JSON.stringify(promos));
 }
 
-// Validate Promo Code
+// Validate Promo Code with 24-Hour Expiration Check
 export function validatePromoCode(code) {
   if (!code) return null;
   const cleanCode = code.trim().toUpperCase();
   const allPromos = getPromoCodes();
+  const promo = allPromos[cleanCode];
 
-  if (allPromos[cleanCode] && allPromos[cleanCode].active !== false) {
+  if (promo && promo.active !== false) {
+    // Check 24-hour expiration
+    if (promo.expiresAt && Date.now() > promo.expiresAt) {
+      return {
+        isValid: false,
+        isExpired: true,
+        errorMessage: 'Bu indirim kodunun 24 saatlik geçerlilik süresi dolmuştur.'
+      };
+    }
+
     return {
       isValid: true,
-      ...allPromos[cleanCode]
+      ...promo
     };
   }
-  return { isValid: false };
+  return { isValid: false, errorMessage: 'Geçersiz indirim kodu.' };
 }

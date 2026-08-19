@@ -149,6 +149,7 @@ export default function AdminPanelModal({
     if (!newPromoCode.trim()) return;
 
     const code = newPromoCode.trim().toUpperCase();
+    const now = Date.now();
     const updated = {
       ...promoCodes,
       [code]: {
@@ -156,7 +157,9 @@ export default function AdminPanelModal({
         discountPercent: Number(newPromoDiscount) || 10,
         description: newPromoDesc || `%${newPromoDiscount} İndirim`,
         active: true,
-        usageCount: 0
+        usageCount: 0,
+        createdAt: now,
+        expiresAt: now + (24 * 60 * 60 * 1000) // 24 Hours validity
       }
     };
     setPromoCodes(updated);
@@ -164,7 +167,7 @@ export default function AdminPanelModal({
     setNewPromoCode('');
     setNewPromoDesc('');
     confetti({ particleCount: 40, spread: 40 });
-    setSaveToast(`'${code}' kuponu başarıyla oluşturuldu!`);
+    setSaveToast(`'${code}' kuponu 24 saat geçerli olarak oluşturuldu!`);
     setTimeout(() => setSaveToast(null), 3000);
   };
 
@@ -190,21 +193,24 @@ export default function AdminPanelModal({
   const handleGenerateDiscountKey = (discountPercent) => {
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const code = `DOCU-${discountPercent}-${randomSuffix}`;
+    const now = Date.now();
     const updated = {
       ...promoCodes,
       [code]: {
         code,
         discountPercent: Number(discountPercent),
-        description: `%${discountPercent} Özel İndirim Key'i`,
+        description: `%${discountPercent} Özel İndirim Key'i (24 Saat Geçerli)`,
         active: true,
-        usageCount: 0
+        usageCount: 0,
+        createdAt: now,
+        expiresAt: now + (24 * 60 * 60 * 1000) // 24 Hours validity
       }
     };
     setPromoCodes(updated);
     savePromoCodes(updated);
     navigator.clipboard.writeText(code);
     confetti({ particleCount: 50, spread: 45 });
-    setSaveToast(`'${code}' key'i başarıyla üretildi ve panoya kopyalandı!`);
+    setSaveToast(`'${code}' key'i (24 saat geçerli) üretildi ve panoya kopyalandı!`);
     setTimeout(() => setSaveToast(null), 3500);
   };
 
@@ -870,43 +876,71 @@ export default function AdminPanelModal({
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Mevcut Kuponlar</span>
                 
                 <div className="space-y-2">
-                  {Object.values(promoCodes).map(promo => (
-                    <div
-                      key={promo.code}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
-                        isDark ? 'bg-slate-950/80 border-white/5' : 'bg-white border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-mono font-bold">
-                          {promo.code}
-                        </span>
-                        <span className="font-extrabold text-emerald-400 font-mono">
-                          -%{promo.discountPercent}
-                        </span>
-                        <span className="text-slate-300 font-medium">{promo.description}</span>
-                      </div>
+                  {Object.values(promoCodes).map(promo => {
+                    const isExpired = promo.expiresAt && Date.now() > promo.expiresAt;
+                    return (
+                      <div
+                        key={promo.code}
+                        className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                          isDark ? 'bg-slate-950/80 border-white/5' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-mono font-bold">
+                            {promo.code}
+                          </span>
+                          <span className="font-extrabold text-emerald-400 font-mono">
+                            -%{promo.discountPercent}
+                          </span>
+                          <span className="text-slate-300 font-medium">{promo.description}</span>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleTogglePromo(promo.code)}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors ${
-                            promo.active !== false ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                          }`}
-                        >
-                          {promo.active !== false ? 'Aktif' : 'Pasif'}
-                        </button>
+                          {/* 24-Hour Expiration Badge */}
+                          {isExpired ? (
+                            <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[10px] font-bold">
+                              ⏳ 24 Saat Doldu (Geçersiz)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
+                              ⏳ 24 Saat Geçerli
+                            </span>
+                          )}
+                        </div>
 
-                        <button
-                          onClick={() => handleDeletePromo(promo.code)}
-                          className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
-                          title="Kuponu Sil"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(promo.code);
+                              setSaveToast(`'${promo.code}' panoya kopyalandı!`);
+                              setTimeout(() => setSaveToast(null), 2000);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold flex items-center gap-1 border border-white/5"
+                            title="Kodu Kopyala"
+                          >
+                            <Copy className="w-3 h-3 text-emerald-400" />
+                            <span>Kopyala</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleTogglePromo(promo.code)}
+                            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors ${
+                              promo.active !== false && !isExpired ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {promo.active !== false && !isExpired ? 'Aktif' : 'Pasif'}
+                          </button>
+
+                          <button
+                            onClick={() => handleDeletePromo(promo.code)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+                            title="Kuponu Sil"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
