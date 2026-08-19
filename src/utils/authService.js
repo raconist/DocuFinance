@@ -163,6 +163,19 @@ export function upgradeUserToPro(userId, planType = 'pro_monthly', licenseKey = 
 }
 
 /**
+ * Update user account with rewarded ad bonus
+ */
+export function updateUserBonus(bonusData) {
+  const current = getCurrentUser();
+  if (current) {
+    current.rewardedBonus = bonusData;
+    saveUserSession(current);
+    return current;
+  }
+  return null;
+}
+
+/**
  * Update user stats after parsing statements
  */
 export function incrementUserStats(txCount = 1) {

@@ -379,6 +379,8 @@ export default function App() {
         isOpen={isRewardedAdOpen}
         onClose={() => setIsRewardedAdOpen(false)}
         onOpenPricing={() => setIsPricingOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        currentUser={currentUser}
         onRewardGranted={(bonus) => {
           setIsProUser(true);
           setBonusKey(prev => prev + 1);

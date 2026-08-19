@@ -13,9 +13,12 @@ import {
   ArrowRight,
   TrendingUp,
   AlertTriangle,
-  Lock
+  Lock,
+  UserCheck,
+  LogIn
 } from 'lucide-react';
 import { grantRewardedBonus, getDailyWatchStats, MAX_DAILY_WATCHES } from '../utils/rewardedAdService';
+import { updateUserBonus } from '../utils/authService';
 import confetti from 'canvas-confetti';
 
 export default function RewardedAdModal({ 
@@ -23,6 +26,8 @@ export default function RewardedAdModal({
   onClose, 
   onRewardGranted,
   onOpenPricing,
+  onOpenAuth,
+  currentUser,
   theme = 'dark',
   lang = 'tr' 
 }) {
@@ -62,6 +67,7 @@ export default function RewardedAdModal({
   const isDark = theme === 'dark';
 
   const handleStartWatch = () => {
+    if (!currentUser) return;
     if (!dailyStats.canWatch) return;
     setIsPlaying(true);
     setCountdown(10);
@@ -70,6 +76,9 @@ export default function RewardedAdModal({
 
   const handleClaimReward = () => {
     const bonus = grantRewardedBonus(24);
+    if (currentUser) {
+      updateUserBonus(bonus);
+    }
     setDailyStats(getDailyWatchStats());
     try {
       confetti({
@@ -104,12 +113,17 @@ export default function RewardedAdModal({
                 <h3 className="text-lg font-extrabold font-display">
                   {lang === 'tr' ? '10 Saniyelik Video ile 2X Limit Kazan!' : 'Watch 10s Video & Get 2X Limits!'}
                 </h3>
-                <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  🎯 Kalan Hak: {dailyStats.remaining} / {MAX_DAILY_WATCHES}
-                </span>
+                {currentUser && (
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    🎯 Kalan Hak: {dailyStats.remaining} / {MAX_DAILY_WATCHES}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400">
-                {lang === 'tr' ? 'Günde 3 kez video izleyerek tüm ücretsiz kotalarınızı 2\'ye katlayın' : 'Watch up to 3 daily sponsor videos to double your export quotas'}
+                {currentUser 
+                  ? (lang === 'tr' ? `Aktif Hesap: ${currentUser.companyName || currentUser.name}` : `Account: ${currentUser.companyName || currentUser.name}`)
+                  : (lang === 'tr' ? 'Ödülü hesabınıza tanımlamak için giriş yapın' : 'Login required to claim bonus')
+                }
               </p>
             </div>
           </div>
@@ -128,8 +142,43 @@ export default function RewardedAdModal({
           {/* Ad Player Screen */}
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-white/10 flex flex-col items-center justify-center shadow-inner">
             
-            {/* Case 1: Daily Limit Exceeded (3/3 completed) */}
-            {!dailyStats.canWatch && !isCompleted ? (
+            {/* Case 0: User Not Logged In -> Login/Register Prompt */}
+            {!currentUser ? (
+              <div className="text-center p-6 space-y-3.5 animate-fadeIn">
+                <div className="w-14 h-14 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-base text-white">
+                    Önce Ücretsiz Hesabınıza Giriş Yapın
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
+                    Videodan kazanacağınız <strong>2X Ekstre Limitini ve AI CFO Modülünü</strong> hesabınıza güvenle tanımlayabilmemiz için lütfen giriş yapın veya 10 saniyede hesap oluşturun.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      onClose();
+                      if (onOpenAuth) onOpenAuth();
+                    }}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 text-slate-950 font-extrabold text-xs shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <LogIn className="w-4 h-4 stroke-[2.5]" />
+                    <span>Giriş Yap / Ücretsiz Kayıt Ol</span>
+                  </button>
+
+                  <button
+                    onClick={onClose}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/10 text-slate-400 hover:text-white text-xs font-semibold hover:bg-white/5 transition-colors"
+                  >
+                    Daha Sonra Hatırlat
+                  </button>
+                </div>
+              </div>
+            ) : !dailyStats.canWatch && !isCompleted ? (
+              /* Case 1: Daily Limit Exceeded (3/3 completed) */
               <div className="text-center p-6 space-y-3 animate-fadeIn">
                 <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto">
                   <Lock className="w-7 h-7" />
@@ -138,7 +187,7 @@ export default function RewardedAdModal({
                   Bugünkü 3/3 Video Hakkınızı Tamamladınız
                 </h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                  Adil kullanım için her cihazdan günde en fazla <strong>3 video izlenebilir</strong>. Yeni haklarınız gece 00:00'da açılacaktır.
+                  Adil kullanım için hesabınızdan günde en fazla <strong>3 video izlenebilir</strong>. Yeni haklarınız gece 00:00'da açılacaktır.
                 </p>
                 <div className="pt-2">
                   <button
@@ -161,7 +210,7 @@ export default function RewardedAdModal({
                 <div>
                   <h4 className="font-extrabold text-base text-white">Sponsor Videosu (10 Saniye)</h4>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
-                    Videoyu tamamlayınca 50 satır sınırınız <strong>100 satıra</strong> çıkacak ve <strong>AI CFO</strong> 24 saat boyunca açılacak.
+                    Videoyu tamamlayınca <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 24 saat boyunca 100 satır ve AI CFO yüklenecektir.
                   </p>
                 </div>
                 <button
@@ -213,13 +262,13 @@ export default function RewardedAdModal({
                 </div>
                 <h4 className="font-extrabold text-lg text-emerald-400">Tebrikler! Ödülünüz Hazır!</h4>
                 <p className="text-xs text-slate-300">
-                  24 saat boyunca geçerli <strong>2X Kota ve AI CFO Modülü</strong> hesabınıza yüklendi.
+                  <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 24 saat geçerli <strong>2X Kota ve AI CFO Modülü</strong> başarıyla tanımlandı.
                 </p>
                 <button
                   onClick={handleClaimReward}
                   className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-extrabold text-sm shadow-xl shadow-emerald-500/20 transition-all hover:scale-105"
                 >
-                  ⚡ 2X Bonusu Aktif Et
+                  ⚡ 2X Bonusu Hesabıma Tanımla
                 </button>
               </div>
             )}
