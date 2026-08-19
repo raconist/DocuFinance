@@ -378,6 +378,7 @@ export default function App() {
       <RewardedAdModal
         isOpen={isRewardedAdOpen}
         onClose={() => setIsRewardedAdOpen(false)}
+        onOpenPricing={() => setIsPricingOpen(true)}
         onRewardGranted={(bonus) => {
           setIsProUser(true);
           setBonusKey(prev => prev + 1);

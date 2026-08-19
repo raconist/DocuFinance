@@ -11,21 +11,34 @@ import {
   Clock,
   Tv,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
-import { grantRewardedBonus } from '../utils/rewardedAdService';
+import { grantRewardedBonus, getDailyWatchStats, MAX_DAILY_WATCHES } from '../utils/rewardedAdService';
 import confetti from 'canvas-confetti';
 
 export default function RewardedAdModal({ 
   isOpen, 
   onClose, 
   onRewardGranted,
+  onOpenPricing,
   theme = 'dark',
   lang = 'tr' 
 }) {
   const [countdown, setCountdown] = useState(10);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [dailyStats, setDailyStats] = useState(() => getDailyWatchStats());
+
+  useEffect(() => {
+    if (isOpen) {
+      setDailyStats(getDailyWatchStats());
+      setIsPlaying(false);
+      setIsCompleted(false);
+      setCountdown(10);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     let timer;
@@ -49,6 +62,7 @@ export default function RewardedAdModal({
   const isDark = theme === 'dark';
 
   const handleStartWatch = () => {
+    if (!dailyStats.canWatch) return;
     setIsPlaying(true);
     setCountdown(10);
     setIsCompleted(false);
@@ -56,6 +70,7 @@ export default function RewardedAdModal({
 
   const handleClaimReward = () => {
     const bonus = grantRewardedBonus(24);
+    setDailyStats(getDailyWatchStats());
     try {
       confetti({
         particleCount: 100,
@@ -89,12 +104,12 @@ export default function RewardedAdModal({
                 <h3 className="text-lg font-extrabold font-display">
                   {lang === 'tr' ? '10 Saniyelik Video ile 2X Limit Kazan!' : 'Watch 10s Video & Get 2X Limits!'}
                 </h3>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  24 SAAT GEÇERLİ
+                <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  🎯 Kalan Hak: {dailyStats.remaining} / {MAX_DAILY_WATCHES}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                {lang === 'tr' ? 'Kısa sponsor videosunu izleyerek tüm ücretsiz kotalarınızı 2\'ye katlayın' : 'Double your export limit and unlock AI CFO for 24 hours'}
+                {lang === 'tr' ? 'Günde 3 kez video izleyerek tüm ücretsiz kotalarınızı 2\'ye katlayın' : 'Watch up to 3 daily sponsor videos to double your export quotas'}
               </p>
             </div>
           </div>
@@ -113,7 +128,32 @@ export default function RewardedAdModal({
           {/* Ad Player Screen */}
           <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-white/10 flex flex-col items-center justify-center shadow-inner">
             
-            {!isPlaying && !isCompleted ? (
+            {/* Case 1: Daily Limit Exceeded (3/3 completed) */}
+            {!dailyStats.canWatch && !isCompleted ? (
+              <div className="text-center p-6 space-y-3 animate-fadeIn">
+                <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <h4 className="font-extrabold text-base text-rose-400">
+                  Bugünkü 3/3 Video Hakkınızı Tamamladınız
+                </h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                  Adil kullanım için her cihazdan günde en fazla <strong>3 video izlenebilir</strong>. Yeni haklarınız gece 00:00'da açılacaktır.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      onClose();
+                      if (onOpenPricing) onOpenPricing();
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg transition-all hover:scale-105"
+                  >
+                    🚀 Beklemeden Sınırsız Pro'ya Geç
+                  </button>
+                </div>
+              </div>
+            ) : !isPlaying && !isCompleted ? (
+              /* Case 2: Ready to Watch */
               <div className="text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto animate-pulse">
                   <Play className="w-8 h-8 fill-current ml-1" />
@@ -121,17 +161,18 @@ export default function RewardedAdModal({
                 <div>
                   <h4 className="font-extrabold text-base text-white">Sponsor Videosu (10 Saniye)</h4>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
-                    Videoyu tamamlayınca 50 satır sınırınız <strong>100 satıra</strong> çıkacak ve <strong>AI CFO</strong> 24 saat boyunca ücretsiz açılacak.
+                    Videoyu tamamlayınca 50 satır sınırınız <strong>100 satıra</strong> çıkacak ve <strong>AI CFO</strong> 24 saat boyunca açılacak.
                   </p>
                 </div>
                 <button
                   onClick={handleStartWatch}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
                 >
-                  ▶ Videoyu Başlat (10s)
+                  ▶ Videoyu Başlat (10s) — ({dailyStats.remaining} Hak Kaldı)
                 </button>
               </div>
             ) : isPlaying && !isCompleted ? (
+              /* Case 3: Playing Video Countdown */
               <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950 p-6 text-center space-y-4">
                 
                 {/* Countdown Badge */}
@@ -165,6 +206,7 @@ export default function RewardedAdModal({
                 </div>
               </div>
             ) : (
+              /* Case 4: Video Finished, Claim Reward */
               <div className="text-center p-6 space-y-3 animate-fadeIn">
                 <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto">
                   <CheckCircle2 className="w-9 h-9" />
