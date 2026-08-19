@@ -43,7 +43,7 @@ export default function HeroSection({ onSelectSample, onOpenSecurity, lang = 'tr
       </h1>
 
       {/* Subtitle */}
-      <p className={`mt-5 text-base sm:text-lg max-w-2xl mx-auto font-normal leading-relaxed ${
+      <p className={`mt-5 text-sm sm:text-base lg:text-lg max-w-3xl mx-auto font-normal leading-relaxed text-center ${
         isDark ? 'text-slate-300' : 'text-slate-600'
       }`}>
         {t.heroSubtitle}
