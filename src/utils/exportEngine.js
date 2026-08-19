@@ -377,3 +377,84 @@ export function exportToJSON(parsedData, options = {}) {
   const blob = new Blob([jsonStr], { type: 'application/json' });
   triggerBlobDownload(blob, (fileName.replace(/\.json$/i, '') || 'Banka_Ekstresi') + '.json');
 }
+
+// 10. German DATEV (SKR03 / SKR04 ASCII Buchungsstapel)
+export function exportToDatevCSV(parsedData, options = {}) {
+  const { fileName = 'DATEV_Buchungsstapel', isMasked = false } = options;
+
+  const headerDatev = 'EXTF;700;21;Buchungsstapel;1;;;DocuFinance AI;';
+  const colHeaders = 'Umsatz (ohne Soll/Haben-Kz);Soll/Haben-Kennzeichen;WKZ;Kurs;Basis-Umsatz;WKZ Basis-Umsatz;Konto;Gegenkonto;BU-Schlüssel;Belegdatum;Belegfeld 1;Belegfeld 2;Skonto;Buchungstext';
+
+  const rows = (parsedData.rows || []).map(row => {
+    let desc = row.description || '';
+    if (isMasked) desc = maskSensitiveData(desc);
+
+    const isCredit = (row.credit || 0) > 0;
+    const amount = isCredit ? (row.credit || 0) : (row.debit || 0);
+    const shKz = isCredit ? 'H' : 'S';
+    const konto = row.accountCode || (isCredit ? '8400' : '4900');
+    const gegenkonto = '1200'; // Bank
+    const dateFormatted = (row.date || '').replace(/[^0-9]/g, '').slice(0, 4); // TTMM
+
+    return [
+      amount.toFixed(2).replace('.', ','),
+      shKz,
+      'EUR',
+      '',
+      '',
+      '',
+      konto,
+      gegenkonto,
+      '',
+      dateFormatted,
+      'DocuFinance',
+      '',
+      '',
+      `"${desc.replace(/"/g, '""').slice(0, 60)}"`
+    ].join(';');
+  });
+
+  const content = [headerDatev, colHeaders, ...rows].join('\r\n');
+  const blob = new Blob([content], { type: 'text/csv;charset=windows-1252;' });
+  triggerBlobDownload(blob, (fileName.replace(/\.csv$/i, '') || 'DATEV_Buchungen') + '.csv');
+}
+
+// 11. Multi-Tab Consolidated Annual Ledger (.xlsx)
+export function exportConsolidatedAnnualLedger(parsedData, options = {}) {
+  const { fileName = 'Konsolide_Yillik_Mizan_2026', isMasked = false, currency = 'TRY' } = options;
+  const wb = XLSX.utils.book_new();
+
+  // Tab 1: All Transactions
+  const allRows = (parsedData.rows || []).map((r, idx) => ({
+    'Sıra': idx + 1,
+    'Tarih': r.date || '',
+    'Kaynak Belge / Banka': r.sourceFile || parsedData.meta?.bankName || 'Banka',
+    'Açıklama': isMasked ? maskSensitiveData(r.description) : (r.description || ''),
+    'Kategori': r.category || 'Genel',
+    'Hesap Kodu': r.accountCode || '',
+    'Borç (Çıkan)': r.debit || 0,
+    'Alacak (Giren)': r.credit || 0,
+    'Net Tutar': (r.credit || 0) - (r.debit || 0),
+    'Bakiye': r.balance || 0
+  }));
+  const ws1 = XLSX.utils.json_to_sheet(allRows);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Konsolide Ekstre');
+
+  // Tab 2: Monthly Summary Matrix
+  const monthlySummary = {};
+  (parsedData.rows || []).forEach(r => {
+    const d = r.date || '';
+    const m = d.length >= 7 ? d.slice(0, 7) : 'Genel';
+    if (!monthlySummary[m]) {
+      monthlySummary[m] = { 'Dönem (Ay)': m, 'Toplam Giren (Gelir)': 0, 'Toplam Çıkan (Gider)': 0, 'Net Nakit Akışı': 0, 'İşlem Sayısı': 0 };
+    }
+    monthlySummary[m]['Toplam Giren (Gelir)'] += (r.credit || 0);
+    monthlySummary[m]['Toplam Çıkan (Gider)'] += (r.debit || 0);
+    monthlySummary[m]['Net Nakit Akışı'] += ((r.credit || 0) - (r.debit || 0));
+    monthlySummary[m]['İşlem Sayısı'] += 1;
+  });
+  const ws2 = XLSX.utils.json_to_sheet(Object.values(monthlySummary));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Aylık Gelir-Gider Mizanı');
+
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
+}

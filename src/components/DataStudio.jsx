@@ -44,6 +44,8 @@ import ExportModal from './ExportModal';
 import RulesModal from './RulesModal';
 import ReconciliationModal from './ReconciliationModal';
 import AuditCertificateModal from './AuditCertificateModal';
+import CfoAnalyticsModal from './CfoAnalyticsModal';
+import { categorizeTransactions } from '../utils/accountingRules';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
 
@@ -72,6 +74,7 @@ export default function DataStudio({
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isReconciliationOpen, setIsReconciliationOpen] = useState(false);
   const [isAuditCertificateOpen, setIsAuditCertificateOpen] = useState(false);
+  const [isCfoModalOpen, setIsCfoModalOpen] = useState(false);
 
   // Row Selection for Bulk Actions
   const [selectedRowIds, setSelectedRowIds] = useState(new Set());
@@ -284,6 +287,23 @@ export default function DataStudio({
     }
   };
 
+  const handleAutoCategorize = () => {
+    const standard = lang === 'tr' ? 'tdhp' : lang === 'de' ? 'datev' : 'gaap';
+    const categorized = categorizeTransactions(data.rows || [], standard);
+    setData(prev => ({
+      ...prev,
+      rows: categorized
+    }));
+    try {
+      confetti({ particleCount: 70, spread: 55, origin: { y: 0.7 } });
+    } catch (e) {}
+    setExportSuccessMsg(lang === 'tr' 
+      ? '✓ 150+ kural ile tüm satırlar muhasebe hesap kodlarına ve kategorilerine bağlandı!' 
+      : '✓ All transactions auto-categorized with universal accounting standards!'
+    );
+    setTimeout(() => setExportSuccessMsg(null), 4000);
+  };
+
   const handleQuickExportExcel = () => {
     try {
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
@@ -319,6 +339,25 @@ export default function DataStudio({
 
         <div className="flex flex-wrap items-center gap-2">
           
+          {/* AI CFO & Cash Flow Analytics */}
+          <button
+            onClick={() => setIsCfoModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+          >
+            <PieChart className="w-4 h-4" />
+            <span>📊 AI CFO & Nakit Akışı</span>
+          </button>
+
+          {/* 1-Click Auto Categorize */}
+          <button
+            onClick={handleAutoCategorize}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 text-slate-950 text-xs font-extrabold shadow-md shadow-amber-500/20 transition-all hover:scale-[1.02]"
+            title="150+ TDHP/GAAP Kuralı ile tek tıkla hesap kodu atar"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>🧠 Akıllı Muhasebeleştir</span>
+          </button>
+
           {/* Cross Reconciliation Tool */}
           <button
             onClick={() => setIsReconciliationOpen(true)}
@@ -327,7 +366,7 @@ export default function DataStudio({
             }`}
           >
             <Scale className="w-4 h-4 text-cyan-400" />
-            <span>Çapraz Mutabakat (Mizan Eşle)</span>
+            <span>Çapraz Mutabakat</span>
           </button>
 
           {/* Audit Certificate Modal */}
@@ -341,15 +380,15 @@ export default function DataStudio({
             <span>Resmi Onay Belgesi (PDF)</span>
           </button>
 
-          {/* Smart Rules Button */}
+          {/* Smart Rules Modal Button */}
           <button
             onClick={() => setIsRulesModalOpen(true)}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
-              isDark ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/40' : 'bg-amber-50 border-amber-300 text-amber-800'
+              isDark ? 'bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-800'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Akıllı Kurallar & TDHP</span>
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>Kural Yöneticisi</span>
           </button>
 
           {/* Currency Switcher */}
@@ -891,6 +930,15 @@ export default function DataStudio({
         onClose={() => setIsAuditCertificateOpen(false)}
         data={data}
         currency={stats.currency}
+        theme={theme}
+        lang={lang}
+      />
+
+      {/* AI CFO & Cash Flow Intelligence Analytics Modal */}
+      <CfoAnalyticsModal
+        isOpen={isCfoModalOpen}
+        onClose={() => setIsCfoModalOpen(false)}
+        transactions={data.rows || []}
         theme={theme}
         lang={lang}
       />
