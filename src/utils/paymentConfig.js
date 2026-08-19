@@ -3,7 +3,7 @@
  * Supports PayTR, Shopier, LemonSqueezy, Stripe, and Direct Bank Transfer (IBAN)
  */
 
-const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v4';
+const STORAGE_KEY_SETTINGS = 'docufinance_admin_payment_settings_v5';
 const STORAGE_KEY_PROMOS = 'docufinance_admin_promo_codes_v2';
 
 export const DEFAULT_PAYMENT_GATEWAYS = {
@@ -17,14 +17,14 @@ export const DEFAULT_PAYMENT_GATEWAYS = {
     proAnnualUrl: 'https://paytr.com/odeme/docufinance-pro-yillik',
     singlePassUrl: 'https://paytr.com/odeme/docufinance-tek-ekstre'
   },
-  // 🇹🇷 Türkiye: Shopier (Şirketsiz Şahıslar İçin 0 Bürokrasi)
+  // 🇹🇷 Türkiye: Shopier (Şirketsiz Bireysel Kart & Taksit)
   shopier: {
     name: 'Shopier (Şirketsiz Bireysel Kart & Taksit)',
     type: 'local',
     enabled: true,
-    proMonthlyUrl: 'https://shopier.com/docufinance_pro_aylik',
-    proAnnualUrl: 'https://shopier.com/docufinance_pro_yillik',
-    singlePassUrl: 'https://shopier.com/docufinance_tek_seferlik'
+    proMonthlyUrl: 'https://www.shopier.com/50024234',
+    proAnnualUrl: 'https://www.shopier.com/50024271',
+    singlePassUrl: 'https://www.shopier.com/50024234'
   },
   // 🌐 Global / Yurt Dışı: LemonSqueezy / Paddle (Yetkili Satıcı - MoR - Türkiye'ye Yasal Para Girişi)
   lemonsqueezy: {
