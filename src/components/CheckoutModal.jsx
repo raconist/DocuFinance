@@ -290,43 +290,32 @@ export default function CheckoutModal({
                 </div>
               )}
 
-              {/* Payment Methods Selector */}
-              <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-slate-950/40 border border-white/5 text-xs font-bold">
+              {/* Payment Methods Selector: 2 Real Channels */}
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-950/40 border border-white/5 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('card')}
                   className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                    paymentMethod === 'card' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+                    paymentMethod === 'card' ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <CreditCard className="w-3.5 h-3.5" />
-                  <span>{lang === 'tr' ? 'Kredi / Banka Kartı' : 'Credit Card'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('applepay')}
-                  className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                    paymentMethod === 'applepay' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Apple / Google Pay</span>
+                  <span>{lang === 'tr' ? 'Kredi / Banka Kartı (Shopier)' : 'Credit Card (Shopier / Stripe)'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('eft')}
                   className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                    paymentMethod === 'eft' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+                    paymentMethod === 'eft' ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>{lang === 'tr' ? 'Havale / EFT / FAST' : 'Bank Wire / SEPA'}</span>
+                  <span>{lang === 'tr' ? 'Havale / EFT / FAST (TEB)' : 'Bank Wire / SEPA'}</span>
                 </button>
               </div>
 
-              {/* FORM 1: SHOPIER KREDİ / BANKA KARTI (TÜRKİYE & GLOBAL) */}
+              {/* CHANNEL 1: SHOPIER KREDİ / BANKA KARTI (TÜRKİYE & GLOBAL) */}
               {paymentMethod === 'card' && (
                 <div className="space-y-4 py-2">
                   <div className={`p-4 rounded-2xl border space-y-3 ${
@@ -338,12 +327,12 @@ export default function CheckoutModal({
                         <span className="font-extrabold text-sm text-white">Shopier 3D Secure Güvenli Ödeme</span>
                       </div>
                       <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
-                        PCI-DSS SEVİYE 1
+                        256-BIT SSL & 3D SECURE
                       </span>
                     </div>
 
                     <p className="text-xs text-slate-300 leading-relaxed">
-                      Tüm yerli ve yabancı <strong>Visa, Mastercard, Troy</strong> kartları ve <strong>12 Aya Varan Taksit</strong> imkanıyla resmi Shopier ödeme altyapısı üzerinden güvenle ödeyin.
+                      Tüm yerli ve yabancı <strong>Visa, Mastercard, Troy</strong> kartları ve <strong>12 Aya Varan Taksit</strong> imkanıyla resmi Shopier ödeme sayfası üzerinden güvenle ödeyin.
                     </p>
 
                     <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-slate-400 font-mono">
@@ -352,6 +341,7 @@ export default function CheckoutModal({
                       <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 World</span>
                       <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 CardFinans</span>
                       <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 Axess / Paraf</span>
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">📱 Apple Pay</span>
                     </div>
                   </div>
 
@@ -365,34 +355,13 @@ export default function CheckoutModal({
                     className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 transform hover:scale-[1.01]"
                   >
                     <Lock className="w-4 h-4" />
-                    <span>{curr.symbol}{finalPrice.toLocaleString()} Shopier ile Güvenli Öde ve Pro'yu Başlat</span>
+                    <span>{curr.symbol}{finalPrice.toLocaleString()} Shopier ile Güvenli Kartla Öde</span>
                     <ExternalLink className="w-4 h-4 ml-1" />
                   </a>
 
                   <p className="text-[11px] text-slate-400 text-center">
-                    🔒 Ödeme tamamlandığında faturanız e-posta adresinize iletilir ve Pro lisansınız anında tanımlanır.
+                    🔒 Ödeme doğrudan Shopier güvencesiyle alınır ve her hafta Çarşamba TEB banka hesabınıza aktarılır.
                   </p>
-                </div>
-              )}
-
-              {/* FORM 2: APPLE PAY / GOOGLE PAY */}
-              {paymentMethod === 'applepay' && (
-                <div className="text-center py-6 space-y-4">
-                  <p className="text-xs text-slate-300">
-                    {lang === 'tr' ? 'Cihazınızdaki biyometrik doğrulama (FaceID / TouchID) ile tek tıkla ödeyin.' : 'Instant 1-click checkout with Apple Pay or Google Wallet.'}
-                  </p>
-                  <a
-                    href={selectedPlan === 'pro_annual' 
-                      ? (getPaymentSettings().shopier?.proAnnualUrl || 'https://www.shopier.com/50024271')
-                      : (getPaymentSettings().shopier?.proMonthlyUrl || 'https://www.shopier.com/50024234')
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full max-w-sm mx-auto py-3.5 rounded-2xl bg-white text-black font-extrabold text-sm shadow-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Smartphone className="w-5 h-5" />
-                    <span>Pay with Apple Pay ({curr.symbol}{finalPrice.toLocaleString()})</span>
-                  </a>
                 </div>
               )}
 
