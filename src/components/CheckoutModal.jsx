@@ -326,107 +326,53 @@ export default function CheckoutModal({
                 </button>
               </div>
 
-              {/* FORM 1: CREDIT CARD */}
+              {/* FORM 1: SHOPIER KREDİ / BANKA KARTI (TÜRKİYE & GLOBAL) */}
               {paymentMethod === 'card' && (
-                <form onSubmit={handleProcessPayment} className="space-y-3.5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">{t.emailLabel}</label>
-                      <input
-                        type="email"
-                        value={billingEmail}
-                        onChange={(e) => setBillingEmail(e.target.value)}
-                        placeholder="fatura@sirketiniz.com"
-                        required
-                        className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                          isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                        {lang === 'tr' ? 'Kart Üzerindeki İsim:' : 'Cardholder Name:'}
-                      </label>
-                      <input
-                        type="text"
-                        value={cardHolder}
-                        onChange={(e) => setCardHolder(e.target.value)}
-                        placeholder={t.demoUserCorporateName}
-                        required
-                        className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                          isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                        {lang === 'tr' ? 'Kart Numarası:' : 'Card Number:'}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={cardNumber}
-                          onChange={handleFormatCardNumber}
-                          placeholder="4242 •••• •••• 4242"
-                          required
-                          className={`w-full px-3.5 py-2 rounded-xl border text-xs font-mono focus:outline-none focus:border-emerald-500 ${
-                            isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">
-                          3D SECURE
-                        </span>
+                <div className="space-y-4 py-2">
+                  <div className={`p-4 rounded-2xl border space-y-3 ${
+                    isDark ? 'bg-slate-950/80 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                        <span className="font-extrabold text-sm text-white">Shopier 3D Secure Güvenli Ödeme</span>
                       </div>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                        PCI-DSS SEVİYE 1
+                      </span>
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                        {lang === 'tr' ? 'Son Kullanma (AA/YY):' : 'Expiry (MM/YY):'}
-                      </label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={handleFormatExpiry}
-                        placeholder="12/28"
-                        required
-                        className={`w-full px-3.5 py-2 rounded-xl border text-xs font-mono text-center focus:outline-none focus:border-emerald-500 ${
-                          isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Tüm yerli ve yabancı <strong>Visa, Mastercard, Troy</strong> kartları ve <strong>12 Aya Varan Taksit</strong> imkanıyla resmi Shopier ödeme altyapısı üzerinden güvenle ödeyin.
+                    </p>
 
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">CVC / CWW:</label>
-                      <input
-                        type="text"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.slice(0, 4))}
-                        placeholder="•••"
-                        required
-                        className={`w-full px-3.5 py-2 rounded-xl border text-xs font-mono text-center focus:outline-none focus:border-emerald-500 ${
-                          isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
-                      />
+                    <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-slate-400 font-mono">
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 Bonus</span>
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 Maximum</span>
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 World</span>
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 CardFinans</span>
+                      <span className="px-2 py-1 rounded-lg bg-slate-900 border border-white/5">💳 Axess / Paraf</span>
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+                  <a
+                    href={selectedPlan === 'pro_annual' 
+                      ? (getPaymentSettings().shopier?.proAnnualUrl || 'https://www.shopier.com/50024271')
+                      : (getPaymentSettings().shopier?.proMonthlyUrl || 'https://www.shopier.com/50024234')
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 transform hover:scale-[1.01]"
                   >
-                    {isProcessing ? (
-                      <span>{lang === 'tr' ? '3D Secure Doğrulanıyor...' : 'Processing 3D Secure...'}</span>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>{curr.symbol}{finalPrice.toLocaleString()} {lang === 'tr' ? 'Güvenli Öde ve Pro Aç' : 'Pay & Activate Pro'}</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+                    <Lock className="w-4 h-4" />
+                    <span>{curr.symbol}{finalPrice.toLocaleString()} Shopier ile Güvenli Öde ve Pro'yu Başlat</span>
+                    <ExternalLink className="w-4 h-4 ml-1" />
+                  </a>
+
+                  <p className="text-[11px] text-slate-400 text-center">
+                    🔒 Ödeme tamamlandığında faturanız e-posta adresinize iletilir ve Pro lisansınız anında tanımlanır.
+                  </p>
+                </div>
               )}
 
               {/* FORM 2: APPLE PAY / GOOGLE PAY */}
@@ -435,14 +381,18 @@ export default function CheckoutModal({
                   <p className="text-xs text-slate-300">
                     {lang === 'tr' ? 'Cihazınızdaki biyometrik doğrulama (FaceID / TouchID) ile tek tıkla ödeyin.' : 'Instant 1-click checkout with Apple Pay or Google Wallet.'}
                   </p>
-                  <button
-                    onClick={handleProcessPayment}
-                    disabled={isProcessing}
+                  <a
+                    href={selectedPlan === 'pro_annual' 
+                      ? (getPaymentSettings().shopier?.proAnnualUrl || 'https://www.shopier.com/50024271')
+                      : (getPaymentSettings().shopier?.proMonthlyUrl || 'https://www.shopier.com/50024234')
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-full max-w-sm mx-auto py-3.5 rounded-2xl bg-white text-black font-extrabold text-sm shadow-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
                   >
                     <Smartphone className="w-5 h-5" />
                     <span>Pay with Apple Pay ({curr.symbol}{finalPrice.toLocaleString()})</span>
-                  </button>
+                  </a>
                 </div>
               )}
 
