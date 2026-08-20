@@ -12,7 +12,7 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { loginUser, registerUser, upgradeUserToPro, resetUserPassword } from '../utils/authService';
+import { loginUser, loginUserAsync, registerUser, upgradeUserToPro, resetUserPassword } from '../utils/authService';
 import { validatePromoCode } from '../utils/paymentConfig';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -43,7 +43,7 @@ export default function AuthModal({
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg(lang === 'tr' ? 'Lütfen e-posta ve şifrenizi girin.' : 'Please enter your email and password.');
@@ -51,7 +51,7 @@ export default function AuthModal({
     }
 
     try {
-      const user = loginUser({ email, password });
+      const user = await loginUserAsync({ email, password });
       confetti({ particleCount: 50, spread: 40 });
       setSuccessMsg(`${t.loginSuccessMsg} ${user.name || user.email}`);
       setTimeout(() => {

@@ -4,7 +4,7 @@
  * and license validation with local persistence and Supabase synchronization.
  */
 
-import { syncUserProfileToCloud } from './supabase';
+import { syncUserProfileToCloud, cloudFindUserByEmail, isSupabaseConfigured } from './supabase';
 
 const AUTH_STORAGE_KEY = 'docufinance_auth_user_v1';
 const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
@@ -132,8 +132,65 @@ export function registerUser({ email, password, name, accountType = 'corporate',
 }
 
 /**
- * Login user with email & password (requires prior registration)
+ * Login user with email & password (strictly requires prior registration in LocalDB or Supabase Cloud)
  */
+export async function loginUserAsync({ email, password }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  let found = existingUsers.find(u => u.email === cleanEmail);
+
+  // If not found in local browser storage, check Supabase Cloud Database
+  if (!found && isSupabaseConfigured) {
+    try {
+      const cloudProfile = await cloudFindUserByEmail(cleanEmail);
+      if (cloudProfile) {
+        found = {
+          id: cloudProfile.id || 'usr_' + Date.now(),
+          email: cloudProfile.email,
+          password: password.trim(), // cache password for local verification
+          name: cloudProfile.name || cloudProfile.email.split('@')[0],
+          accountType: cloudProfile.account_type || 'individual',
+          companyName: cloudProfile.company_name || '',
+          taxNumber: cloudProfile.tax_number || '',
+          tier: cloudProfile.tier || 'free',
+          subscription: {
+            plan: cloudProfile.tier || 'free',
+            status: 'active',
+            licenseKey: cloudProfile.license_key || ''
+          },
+          stats: {
+            totalParsedStatements: cloudProfile.statements_parsed_count || 0,
+            totalTransactionsProcessed: cloudProfile.rows_processed_count || 0,
+            hoursSaved: cloudProfile.hours_saved || 0
+          }
+        };
+        existingUsers.push(found);
+        localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+      }
+    } catch (e) {
+      console.warn('Cloud login check fallback:', e);
+    }
+  }
+
+  // ⛔ STRICT REJECTION: User MUST be registered
+  if (!found) {
+    throw new Error('Bu e-posta adresiyle kayıtlı bir hesap bulunamadı. Lütfen önce "Kayıt Ol" sekmesinden ücretsiz hesabınızı oluşturun.');
+  }
+
+  // ⛔ STRICT PASSWORD CHECK
+  if (password && found.password && found.password !== password.trim()) {
+    throw new Error('Girdiğiniz şifre hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+  }
+
+  saveUserSession(found);
+
+  // Background sync to Supabase
+  syncUserProfileToCloud(found).catch(() => {});
+
+  return found;
+}
+
 export function loginUser({ email, password }) {
   const cleanEmail = email.trim().toLowerCase();
   const existingUsers = getRegisteredUsers();
@@ -148,10 +205,6 @@ export function loginUser({ email, password }) {
   }
 
   saveUserSession(found);
-
-  // Background sync to Supabase
-  syncUserProfileToCloud(found).catch(() => {});
-
   return found;
 }
 

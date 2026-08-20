@@ -10,6 +10,28 @@ export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 /**
+ * Find user by email in Supabase profiles table
+ */
+export async function cloudFindUserByEmail(email) {
+  if (!isSupabaseConfigured || !email) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=*`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.length > 0 ? data[0] : null;
+  } catch (e) {
+    console.warn('Supabase find user network error:', e);
+    return null;
+  }
+}
+
+/**
  * Sync or upsert user profile to Supabase Cloud profiles table
  */
 export async function syncUserProfileToCloud(user) {
