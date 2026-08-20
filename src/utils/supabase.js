@@ -3,10 +3,56 @@
  * Connects to Supabase for User Profiles, Subscriptions, and Encrypted Cloud Backups.
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const RAW_URL = import.meta.env.VITE_SUPABASE_URL || '';
+export const SUPABASE_URL = RAW_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+/**
+ * Sync or upsert user profile to Supabase Cloud profiles table
+ */
+export async function syncUserProfileToCloud(user) {
+  if (!isSupabaseConfigured || !user?.email) return { success: false, mode: 'local' };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify({
+        id: user.id || undefined,
+        email: user.email.toLowerCase(),
+        name: user.name || user.email.split('@')[0],
+        account_type: user.accountType || 'individual',
+        company_name: user.companyName || '',
+        tax_number: user.taxNumber || '',
+        tier: user.tier || 'free',
+        license_key: user.subscription?.licenseKey || '',
+        monthly_statement_quota: user.tier === 'free' ? 50 : 999999,
+        statements_parsed_count: user.stats?.totalParsedStatements || 0,
+        rows_processed_count: user.stats?.totalTransactionsProcessed || 0,
+        hours_saved: user.stats?.hoursSaved || 0,
+        updated_at: new Date().toISOString()
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn('Supabase profile sync warning:', errText);
+      return { success: false, error: errText };
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.warn('Supabase profile sync network fallback:', e);
+    return { success: false };
+  }
+}
 
 /**
  * Sync parsed statement record to Supabase Cloud PostgreSQL

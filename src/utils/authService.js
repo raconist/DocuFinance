@@ -4,7 +4,10 @@
  * and license validation with local persistence and Supabase synchronization.
  */
 
+import { syncUserProfileToCloud } from './supabase';
+
 const AUTH_STORAGE_KEY = 'docufinance_auth_user_v1';
+const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
 
 export const USER_TIERS = {
   FREE: {
@@ -69,8 +72,6 @@ export function logoutUser() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
-const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
-
 /**
  * Helper to get all registered accounts
  */
@@ -123,6 +124,10 @@ export function registerUser({ email, password, name, accountType = 'corporate',
   existingUsers.push(newUser);
   localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
   saveUserSession(newUser);
+
+  // Background sync to Supabase
+  syncUserProfileToCloud(newUser).catch(() => {});
+
   return newUser;
 }
 
@@ -143,6 +148,10 @@ export function loginUser({ email, password }) {
   }
 
   saveUserSession(found);
+
+  // Background sync to Supabase
+  syncUserProfileToCloud(found).catch(() => {});
+
   return found;
 }
 
@@ -166,6 +175,10 @@ export function resetUserPassword({ email, newPassword }) {
   localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
   
   saveUserSession(existingUsers[userIndex]);
+
+  // Background sync to Supabase
+  syncUserProfileToCloud(existingUsers[userIndex]).catch(() => {});
+
   return existingUsers[userIndex];
 }
 
