@@ -169,10 +169,9 @@ export default function App() {
       const result = parseFinancialContent(sample.text);
       result.meta.fileName = sample.name;
       result.meta.documentHash = hash;
+      result.meta.isDemo = true;
 
-      await saveStatementToLocalDB(result);
-      incrementUserStats(result.rows?.length || 1);
-      setCurrentUser(getCurrentUser());
+      // Notice: Demos are for instant live preview only; they are NOT saved to local DB history.
 
       setParsedData(result);
       setCurrentView('app');

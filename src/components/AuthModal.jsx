@@ -56,7 +56,7 @@ export default function AuthModal({
         onClose();
       }, 1000);
     } catch (err) {
-      setErrorMsg(lang === 'tr' ? 'Giriş yapılırken bir hata oluştu.' : lang === 'de' ? 'Fehler bei der Anmeldung.' : 'An error occurred during login.');
+      setErrorMsg(err.message || (lang === 'tr' ? 'Giriş yapılırken bir hata oluştu.' : 'An error occurred during login.'));
     }
   };
 
@@ -83,7 +83,7 @@ export default function AuthModal({
         onClose();
       }, 1000);
     } catch (err) {
-      setErrorMsg(lang === 'tr' ? 'Kayıt oluşturulurken bir hata oluştu.' : lang === 'de' ? 'Fehler bei der Registrierung.' : 'An error occurred during registration.');
+      setErrorMsg(err.message || (lang === 'tr' ? 'Kayıt oluşturulurken bir hata oluştu.' : 'An error occurred during registration.'));
     }
   };
 

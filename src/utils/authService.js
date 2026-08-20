@@ -69,13 +69,37 @@ export function logoutUser() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
+const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
+
+/**
+ * Helper to get all registered accounts
+ */
+export function getRegisteredUsers() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(AUTH_USERS_DB_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 /**
  * Register a new user (Individual or Corporate)
  */
 export function registerUser({ email, password, name, accountType = 'corporate', companyName = '', taxNumber = '' }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  const found = existingUsers.find(u => u.email === cleanEmail);
+  if (found) {
+    throw new Error('Bu e-posta adresiyle zaten kayıtlı bir hesap mevcut. Lütfen Giriş Yap sekmesinden giriş yapınız.');
+  }
+
   const newUser = {
     id: 'usr_' + Date.now(),
-    email: email.trim().toLowerCase(),
+    email: cleanEmail,
+    password: password.trim(),
     name: name.trim(),
     accountType, // 'individual' | 'corporate'
     companyName: companyName.trim() || name.trim(),
@@ -96,44 +120,30 @@ export function registerUser({ email, password, name, accountType = 'corporate',
     createdAt: new Date().toISOString()
   };
 
+  existingUsers.push(newUser);
+  localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
   saveUserSession(newUser);
   return newUser;
 }
 
 /**
- * Login user with email & password
+ * Login user with email & password (requires prior registration)
  */
-export function loginUser({ email, password, companyName = '', taxNumber = '' }) {
-  const current = getCurrentUser();
-  if (current && current.email === email.trim().toLowerCase()) {
-    return current;
+export function loginUser({ email, password }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  const found = existingUsers.find(u => u.email === cleanEmail);
+  if (!found) {
+    throw new Error('Bu e-posta adresiyle kayıtlı bir hesap bulunamadı. Lütfen önce "Kayıt Ol" sekmesinden ücretsiz hesabınızı oluşturun.');
   }
 
-  // Create clean initial session with 0 processed count
-  const user = {
-    id: 'usr_' + Date.now(),
-    email: email.trim().toLowerCase(),
-    name: email.split('@')[0],
-    accountType: companyName ? 'corporate' : 'individual',
-    companyName: companyName || email.split('@')[0],
-    taxNumber: taxNumber || '',
-    tier: 'free',
-    subscription: {
-      plan: 'free',
-      status: 'active',
-      startDate: new Date().toISOString(),
-      renewDate: null
-    },
-    stats: {
-      totalParsedStatements: 0,
-      totalTransactionsProcessed: 0,
-      hoursSaved: 0
-    },
-    createdAt: new Date().toISOString()
-  };
+  if (password && found.password && found.password !== password.trim()) {
+    throw new Error('Girdiğiniz şifre hatalı. Lütfen kontrol edip tekrar deneyiniz.');
+  }
 
-  saveUserSession(user);
-  return user;
+  saveUserSession(found);
+  return found;
 }
 
 /**
