@@ -277,8 +277,14 @@ export function parseFinancialContent(rawText) {
     });
   }
 
+  // --- 💡 SMART INVOICE & RECEIPT FALLBACK ENGINE ---
+  // If no multi-column bank statement rows were found, parse as e-Arşiv / PDF Fatura / Fiş / Dekont
   if (transactions.length === 0) {
-    throw new Error('Belgede geçerli finansal işlem veya tarih-tutar satırları tespit edilemedi.');
+    const invoiceResult = parseInvoiceFromUnstructuredText(rawText);
+    if (invoiceResult && invoiceResult.rows && invoiceResult.rows.length > 0) {
+      return invoiceResult;
+    }
+    throw new Error('Belgede geçerli finansal işlem, banka hareketi veya fatura tutarı tespit edilemedi. Lütfen net bir PDF veya görsel yükleyiniz.');
   }
 
   // Calculate totals & balances
@@ -322,6 +328,183 @@ export function parseFinancialContent(rawText) {
       documentHash: 'DOCU_' + Date.now()
     },
     rows: transactions
+  };
+}
+
+/**
+ * Intelligent Invoice / Receipt / Dekont Unstructured Text Parser
+ * Extracts invoice ID, date, supplier, VKN, matrah, KDV, and payable amount from any free-form PDF/Image text.
+ */
+export function parseInvoiceFromUnstructuredText(rawText) {
+  if (!rawText || !rawText.trim()) return null;
+
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const currency = detectCurrency(rawText);
+
+  // 1. Extract Invoice Date
+  let invoiceDate = new Date().toLocaleDateString('tr-TR');
+  const dateRegex = /\b(\d{2}[./-]\d{2}[./-]\d{4}|\d{4}[./-]\d{2}[./-]\d{2})\b/;
+  for (const line of lines) {
+    const upper = line.toUpperCase();
+    if (upper.includes('TARİH') || upper.includes('TARIH') || upper.includes('DATE') || upper.includes('DÜZENLEME')) {
+      const match = line.match(dateRegex);
+      if (match) {
+        invoiceDate = match[1];
+        break;
+      }
+    }
+  }
+  if (invoiceDate === new Date().toLocaleDateString('tr-TR')) {
+    const anyDateMatch = rawText.match(dateRegex);
+    if (anyDateMatch) invoiceDate = anyDateMatch[1];
+  }
+
+  // 2. Extract Invoice Number / ID
+  let invoiceNo = '';
+  const gibIdMatch = rawText.match(/\b([A-Z]{3}\d{13})\b/);
+  if (gibIdMatch) {
+    invoiceNo = gibIdMatch[1];
+  } else {
+    const invNoRegex = /\b(?:FATURA|E-ARŞİV|E-FATURA|BELGE|INVOICE|SERİ|SIRA|NO)[\s#:.-]*([A-Z0-9-]{4,20})\b/i;
+    const invMatch = rawText.match(invNoRegex);
+    if (invMatch && !invMatch[1].match(/^\d{2}[./-]/)) {
+      invoiceNo = invMatch[1];
+    } else {
+      invoiceNo = `FAT-${Date.now().toString().slice(-6)}`;
+    }
+  }
+
+  // 3. Extract VKN / TCKN
+  let vkn = '';
+  const vknMatch = rawText.match(/\b(?:VKN|TCKN|VERGİ\s*NO|VERGI\s*NO|TAX\s*ID|T\.C\.)[\s:.-]*(\d{10,11})\b/i);
+  if (vknMatch) {
+    vkn = vknMatch[1];
+  }
+
+  // 4. Extract Supplier / Company Name
+  let supplierName = '';
+  for (const line of lines.slice(0, 15)) {
+    const upper = line.toUpperCase();
+    if (
+      upper.includes('A.Ş.') || 
+      upper.includes('A.S.') || 
+      upper.includes('LTD.') || 
+      upper.includes('ŞTİ') || 
+      upper.includes('STI') || 
+      upper.includes('TİC.') || 
+      upper.includes('SAN.') || 
+      upper.includes('PAZARLAMA') || 
+      upper.includes('HİZMETLERİ') ||
+      upper.includes('GMBH') ||
+      upper.includes('INC') ||
+      upper.includes('LLC')
+    ) {
+      supplierName = line.replace(/^(SATICI|GÖNDEREN|FİRMA|UNVAN)[:\s-]*/i, '').trim();
+      break;
+    }
+  }
+  if (!supplierName) {
+    supplierName = lines[0]?.length < 50 ? lines[0] : 'Ticari Fatura / Satıcı';
+  }
+
+  // 5. Extract Financial Amounts (Matrah, KDV, Ödenecek Tutar)
+  const amountPattern = /[-+]?\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})\b/g;
+  let payableAmount = 0;
+  let taxAmount = 0;
+  let matrah = 0;
+
+  for (const line of lines) {
+    const upper = line.toUpperCase();
+    const amounts = line.match(amountPattern);
+    if (!amounts || amounts.length === 0) continue;
+
+    const lastVal = parseFinancialNumber(amounts[amounts.length - 1]);
+
+    if (
+      upper.includes('ÖDENECEK') || 
+      upper.includes('ODENECEK') || 
+      upper.includes('GENEL TOPLAM') || 
+      upper.includes('TOPLAM TUTAR') || 
+      upper.includes('VERGİLER DAHİL') || 
+      upper.includes('TOTAL AMOUNT') || 
+      upper.includes('TOTAL PAYABLE')
+    ) {
+      if (lastVal > 0) payableAmount = lastVal;
+    } else if (
+      upper.includes('HESAPLANAN KDV') || 
+      upper.includes('KDV TUTARI') || 
+      upper.includes('TOPLAM KDV') || 
+      upper.includes('KDV (%') || 
+      upper.includes('VAT AMOUNT')
+    ) {
+      if (lastVal > 0) taxAmount = lastVal;
+    } else if (
+      upper.includes('MATRAH') || 
+      upper.includes('MAL HİZMET TOPLAM') || 
+      upper.includes('ARA TOPLAM') || 
+      upper.includes('SUBTOTAL') || 
+      upper.includes('VERGİ HARİÇ')
+    ) {
+      if (lastVal > 0) matrah = lastVal;
+    }
+  }
+
+  // Fallback: If payableAmount is still 0, find the highest positive amount in the document
+  if (payableAmount === 0) {
+    const allAmounts = (rawText.match(amountPattern) || []).map(parseFinancialNumber).filter(n => n > 0);
+    if (allAmounts.length > 0) {
+      payableAmount = Math.max(...allAmounts);
+    }
+  }
+
+  if (payableAmount === 0) return null;
+
+  if (matrah === 0 && taxAmount > 0) {
+    matrah = Math.max(0, payableAmount - taxAmount);
+  } else if (matrah === 0 && taxAmount === 0) {
+    // Standard %20 KDV assumption
+    matrah = +(payableAmount / 1.20).toFixed(2);
+    taxAmount = +(payableAmount - matrah).toFixed(2);
+  }
+
+  const description = `Fatura: ${invoiceNo} | ${supplierName} (Matrah: ${matrah.toFixed(2)}, KDV: ${taxAmount.toFixed(2)}${vkn ? `, VKN: ${vkn}` : ''})`;
+
+  const invoiceRow = {
+    id: `inv_${Date.now()}_1`,
+    date: invoiceDate,
+    description: description,
+    category: 'Fatura & Hizmet Alımı',
+    accountCode: '770.08',
+    accountName: 'Fatura Giderleri ve Alışlar',
+    debit: payableAmount,
+    credit: 0,
+    amount: -payableAmount,
+    balance: 0,
+    invoiceNumber: invoiceNo,
+    supplierName: supplierName,
+    supplierVKN: vkn,
+    taxAmount: taxAmount,
+    taxExclusiveAmount: matrah,
+    isVerified: true
+  };
+
+  return {
+    meta: {
+      bankName: `e-Fatura / Fatura (${invoiceNo})`,
+      currency: currency,
+      transactionCount: 1,
+      startingBalance: 0,
+      endingBalance: 0,
+      calculatedEnding: -payableAmount,
+      totalDebit: payableAmount,
+      totalCredit: 0,
+      netFlow: -payableAmount,
+      discrepancy: 0,
+      isReconciled: true,
+      documentHash: 'DOCU_INV_' + Date.now(),
+      documentType: 'invoice'
+    },
+    rows: [invoiceRow]
   };
 }
 
