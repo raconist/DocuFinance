@@ -103,8 +103,8 @@ export function registerUser({ email, password, name, accountType = 'corporate',
     password: password.trim(),
     name: name.trim(),
     accountType, // 'individual' | 'corporate'
-    companyName: companyName.trim() || name.trim(),
-    taxNumber: taxNumber.trim(),
+    companyName: companyName.trim() || '',
+    taxNumber: taxNumber.trim() || '',
     tier: 'free',
     subscription: {
       plan: 'free',

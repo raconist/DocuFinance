@@ -76,8 +76,8 @@ export default function AuthModal({
         password,
         name,
         accountType,
-        companyName: companyName || (accountType === 'corporate' ? t.demoUserCompanyName : ''),
-        taxNumber: taxNumber || (accountType === 'corporate' ? (lang === 'tr' ? '4892019482' : 'DE318492019') : '')
+        companyName: companyName.trim(),
+        taxNumber: taxNumber.trim()
       });
       confetti({ particleCount: 60, spread: 50 });
       setSuccessMsg(t.registerSuccessMsg);
