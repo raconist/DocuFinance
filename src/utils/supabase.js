@@ -32,6 +32,27 @@ export async function cloudFindUserByEmail(email) {
 }
 
 /**
+ * Find any user profile in Supabase by hardware device fingerprint
+ */
+export async function cloudFindUserByDevice(deviceFingerprint) {
+  if (!isSupabaseConfigured || !deviceFingerprint) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?device_fingerprint=eq.${encodeURIComponent(deviceFingerprint)}&select=*`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.length > 0 ? data[0] : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Sync or upsert user profile to Supabase Cloud profiles table
  */
 export async function syncUserProfileToCloud(user) {
@@ -55,6 +76,7 @@ export async function syncUserProfileToCloud(user) {
         tax_number: user.taxNumber || '',
         tier: user.tier || 'free',
         license_key: user.subscription?.licenseKey || '',
+        device_fingerprint: user.deviceFingerprint || '',
         monthly_statement_quota: user.tier === 'free' ? 50 : 999999,
         statements_parsed_count: user.stats?.totalParsedStatements || 0,
         rows_processed_count: user.stats?.totalTransactionsProcessed || 0,

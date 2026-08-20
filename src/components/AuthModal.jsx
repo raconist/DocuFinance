@@ -12,7 +12,7 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { loginUser, loginUserAsync, registerUser, upgradeUserToPro, resetUserPassword } from '../utils/authService';
+import { loginUser, loginUserAsync, registerUser, registerUserAsync, upgradeUserToPro, resetUserPassword } from '../utils/authService';
 import { validatePromoCode } from '../utils/paymentConfig';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -63,7 +63,7 @@ export default function AuthModal({
     }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!email || !password || !name) {
       setErrorMsg(lang === 'tr' ? 'Lütfen tüm zorunlu alanları doldurun.' : 'Please fill in all required fields.');
@@ -71,7 +71,7 @@ export default function AuthModal({
     }
 
     try {
-      const user = registerUser({
+      const user = await registerUserAsync({
         email,
         password,
         name,

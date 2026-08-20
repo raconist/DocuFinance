@@ -1,10 +1,12 @@
 import { 
   syncUserProfileToCloud, 
   cloudFindUserByEmail, 
+  cloudFindUserByDevice,
   cloudFetchAllUsers, 
   cloudDeleteUser, 
   isSupabaseConfigured 
 } from './supabase';
+import { getDeviceFingerprint } from './deviceFingerprint';
 
 const AUTH_STORAGE_KEY = 'docufinance_auth_user_v1';
 const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
@@ -86,15 +88,35 @@ export function getRegisteredUsers() {
 }
 
 /**
- * Register a new user (Individual or Corporate)
+ * Register a new user with strict hardware device fingerprint restriction
+ * (Only 1 account permitted per computer/device)
  */
-export function registerUser({ email, password, name, accountType = 'corporate', companyName = '', taxNumber = '' }) {
+export async function registerUserAsync({ email, password, name, accountType = 'corporate', companyName = '', taxNumber = '' }) {
   const cleanEmail = email.trim().toLowerCase();
   const existingUsers = getRegisteredUsers();
 
   const found = existingUsers.find(u => u.email === cleanEmail);
   if (found) {
     throw new Error('Bu e-posta adresiyle zaten kayıtlı bir hesap mevcut. Lütfen Giriş Yap sekmesinden giriş yapınız.');
+  }
+
+  // 🛡️ Device Fingerprint Check (Hardware & Browser Signature)
+  const deviceId = await getDeviceFingerprint();
+
+  // 1. Check local storage for previous registration from this device
+  const deviceMatchLocal = existingUsers.find(u => u.deviceFingerprint === deviceId && u.email !== cleanEmail);
+  if (deviceMatchLocal) {
+    throw new Error(`Bu bilgisayardan/cihazdan daha önce bir hesap (${deviceMatchLocal.email}) oluşturulmuş. Her cihazdan yalnızca 1 adet ücretsiz hesap açılabilir. Lütfen mevcut hesabınızla giriş yapınız.`);
+  }
+
+  // 2. Check Supabase Cloud database for previous registration from this device
+  if (isSupabaseConfigured) {
+    try {
+      const cloudMatch = await cloudFindUserByDevice(deviceId);
+      if (cloudMatch && cloudMatch.email?.toLowerCase() !== cleanEmail) {
+        throw new Error(`Bu bilgisayardan/cihazdan daha önce bir hesap (${cloudMatch.email}) oluşturulmuş. Her cihazdan yalnızca 1 adet ücretsiz hesap açılabilir. Lütfen mevcut hesabınızla giriş yapınız.`);
+      }
+    } catch (e) {}
   }
 
   const newUser = {
@@ -105,6 +127,7 @@ export function registerUser({ email, password, name, accountType = 'corporate',
     accountType, // 'individual' | 'corporate'
     companyName: companyName.trim() || '',
     taxNumber: taxNumber.trim() || '',
+    deviceFingerprint: deviceId,
     tier: 'free',
     subscription: {
       plan: 'free',
@@ -126,6 +149,51 @@ export function registerUser({ email, password, name, accountType = 'corporate',
   saveUserSession(newUser);
 
   // Background sync to Supabase
+  syncUserProfileToCloud(newUser).catch(() => {});
+
+  return newUser;
+}
+
+export function registerUser(params) {
+  const cleanEmail = params.email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  const found = existingUsers.find(u => u.email === cleanEmail);
+  if (found) {
+    throw new Error('Bu e-posta adresiyle zaten kayıtlı bir hesap mevcut. Lütfen Giriş Yap sekmesinden giriş yapınız.');
+  }
+
+  const cachedDeviceId = typeof window !== 'undefined' ? (localStorage.getItem('docufinance_device_sig_v1') || '') : '';
+
+  const newUser = {
+    id: 'usr_' + Date.now(),
+    email: cleanEmail,
+    password: (params.password || '').trim(),
+    name: (params.name || '').trim(),
+    accountType: params.accountType || 'corporate',
+    companyName: (params.companyName || '').trim(),
+    taxNumber: (params.taxNumber || '').trim(),
+    deviceFingerprint: cachedDeviceId,
+    tier: 'free',
+    subscription: {
+      plan: 'free',
+      status: 'active',
+      startDate: new Date().toISOString(),
+      renewDate: null,
+      invoicesCount: 0
+    },
+    stats: {
+      totalParsedStatements: 0,
+      totalTransactionsProcessed: 0,
+      hoursSaved: 0
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  existingUsers.push(newUser);
+  localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+  saveUserSession(newUser);
+
   syncUserProfileToCloud(newUser).catch(() => {});
 
   return newUser;
