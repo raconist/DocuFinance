@@ -277,8 +277,95 @@ export function loginUser({ email, password }) {
 }
 
 /**
- * Reset password for an existing account
+ * Reset password for an existing account with Trusted Device & Security Verification
  */
+export async function resetUserPasswordAsync({ email, newPassword, securityChallenge = '' }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  let userIndex = existingUsers.findIndex(u => u.email === cleanEmail);
+  let targetUser = userIndex !== -1 ? existingUsers[userIndex] : null;
+
+  // If not found in localStorage, try finding in Supabase
+  if (!targetUser && isSupabaseConfigured) {
+    const cloudUser = await cloudFindUserByEmail(cleanEmail);
+    if (cloudUser) {
+      targetUser = {
+        id: cloudUser.id || 'usr_' + Date.now(),
+        email: cloudUser.email,
+        name: cloudUser.name || cloudUser.email.split('@')[0],
+        accountType: cloudUser.account_type || 'individual',
+        companyName: cloudUser.company_name || '',
+        taxNumber: cloudUser.tax_number || '',
+        tier: cloudUser.tier || 'free',
+        deviceFingerprint: cloudUser.device_fingerprint || '',
+        subscription: {
+          plan: cloudUser.tier || 'free',
+          status: 'active',
+          licenseKey: cloudUser.license_key || ''
+        }
+      };
+      existingUsers.push(targetUser);
+      userIndex = existingUsers.length - 1;
+    }
+  }
+
+  if (!targetUser) {
+    throw new Error('Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.');
+  }
+
+  if (!newPassword || newPassword.trim().length < 4) {
+    throw new Error('Yeni şifreniz en az 4 karakterden oluşmalıdır.');
+  }
+
+  // 🛡️ SECURITY & IDENTITY VERIFICATION:
+  // Check 1: Is this the recognized/trusted device for this user?
+  const currentDevice = await getDeviceFingerprint();
+  const isTrustedDevice = Boolean(
+    targetUser.deviceFingerprint && targetUser.deviceFingerprint === currentDevice
+  );
+
+  // Check 2: If NOT on the trusted original device, require matching VKN or Company/Name
+  if (!isTrustedDevice) {
+    const challengeClean = securityChallenge.trim().toLowerCase();
+    const userTax = (targetUser.taxNumber || '').trim().toLowerCase();
+    const userCompany = (targetUser.companyName || '').trim().toLowerCase();
+    const userName = (targetUser.name || '').trim().toLowerCase();
+
+    const isMatch = (
+      (userTax && challengeClean === userTax) ||
+      (userCompany && challengeClean.length >= 3 && (userCompany.includes(challengeClean) || challengeClean.includes(userCompany))) ||
+      (userName && challengeClean.length >= 3 && (userName.includes(challengeClean) || challengeClean.includes(userName)))
+    );
+
+    if (!challengeClean) {
+      throw new Error('Tanınmayan Cihaz: Hesabınızı doğrulamak ve yetkisiz erişimi engellemek için lütfen kayıtlı VKN / Vergi Numaranızı veya Şirket Adınızı giriniz.');
+    }
+
+    if (!isMatch) {
+      throw new Error('Güvenlik Doğrulaması Başarısız: Girdiğiniz VKN veya Şirket bilgisi hesap kayıtlarıyla eşleşmedi. Yetkisiz şifre sıfırlama engellendi.');
+    }
+  }
+
+  // Update password & update device association
+  targetUser.password = newPassword.trim();
+  targetUser.deviceFingerprint = currentDevice;
+
+  if (userIndex !== -1) {
+    existingUsers[userIndex] = targetUser;
+  } else {
+    existingUsers.push(targetUser);
+  }
+
+  localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+  saveUserSession(targetUser);
+
+  // Sync to Supabase
+  await syncUserProfileToCloud(targetUser);
+
+  return targetUser;
+}
+
 export function resetUserPassword({ email, newPassword }) {
   const cleanEmail = email.trim().toLowerCase();
   const existingUsers = getRegisteredUsers();

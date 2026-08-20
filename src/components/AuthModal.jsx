@@ -12,7 +12,7 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
-import { loginUser, loginUserAsync, registerUser, registerUserAsync, upgradeUserToPro, resetUserPassword } from '../utils/authService';
+import { loginUser, loginUserAsync, registerUser, registerUserAsync, upgradeUserToPro, resetUserPassword, resetUserPasswordAsync } from '../utils/authService';
 import { validatePromoCode } from '../utils/paymentConfig';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -29,6 +29,7 @@ export default function AuthModal({
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [securityChallenge, setSecurityChallenge] = useState('');
   const [name, setName] = useState('');
   const [accountType, setAccountType] = useState('corporate'); // 'corporate' | 'individual'
   const [companyName, setCompanyName] = useState('');
@@ -93,7 +94,7 @@ export default function AuthModal({
     }
   };
 
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!email || !newPassword) {
       setErrorMsg(lang === 'tr' ? 'Lütfen e-posta adresinizi ve yeni şifrenizi girin.' : 'Please enter your email and new password.');
@@ -105,9 +106,13 @@ export default function AuthModal({
     }
 
     try {
-      const user = resetUserPassword({ email, newPassword });
+      const user = await resetUserPasswordAsync({ 
+        email, 
+        newPassword, 
+        securityChallenge 
+      });
       confetti({ particleCount: 50, spread: 40 });
-      setSuccessMsg(lang === 'tr' ? 'Şifreniz başarıyla sıfırlandı ve oturum açıldı!' : 'Password reset successfully!');
+      setSuccessMsg(lang === 'tr' ? 'Şifreniz başarıyla sıfırlandı ve güvenli oturum açıldı!' : 'Password reset successfully!');
       setTimeout(() => {
         onAuthSuccess(user);
         onClose();
@@ -434,8 +439,11 @@ export default function AuthModal({
           {/* TAB 3: FORGOT / RESET PASSWORD */}
           {activeTab === 'forgot' && (
             <form onSubmit={handleResetPassword} className="space-y-4">
-              <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs">
-                Kayıtlı e-posta adresinizi ve hesabınız için belirlemek istediğiniz yeni şifrenizi girin.
+              <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Güvenli Şifre Sıfırlama:</strong> Hesabınızı açtığınız yetkili bilgisayardan işlem yapıyorsanız doğrulama otomatik tamamlanır. Başka bir cihazdan işlem yapıyorsanız kayıtlı VKN veya Şirket Adınız istenir.
+                </span>
               </div>
 
               <div>
@@ -453,6 +461,25 @@ export default function AuthModal({
                     isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
                   }`}
                 />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Güvenlik Doğrulaması (Kayıtlı VKN / Şirket veya Ad Soyad)</span>
+                </label>
+                <input
+                  type="text"
+                  value={securityChallenge}
+                  onChange={(e) => setSecurityChallenge(e.target.value)}
+                  placeholder="Kayıtlı VKN, Şirket Unvanı veya Yetkili Adınız"
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-cyan-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  * Kendi cihazınızdan işlem yapıyorsanız bu alanı boş bırakabilirsiniz.
+                </p>
               </div>
 
               <div>
@@ -494,7 +521,7 @@ export default function AuthModal({
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Şifreyi Güncelle ve Giriş Yap</span>
+                <span>Güvenli Şifreyi Güncelle ve Giriş Yap</span>
               </button>
             </form>
           )}
