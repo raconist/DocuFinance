@@ -151,11 +151,16 @@ export default function App() {
     if (user?.tier?.includes('pro')) {
       setIsProUser(true);
     }
+    // Clear any guest demo from RAM on login so member sees clean workspace
+    if (parsedData?.meta?.isDemo) {
+      setParsedData(null);
+    }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setIsProUser(false);
+    setParsedData(null);
   };
 
   const handleSelectSample = async (sampleKey) => {

@@ -4,6 +4,7 @@ import { getAllStatementsFromLocalDB, deleteStatementFromLocalDB, clearAllStatem
 import { formatCurrency } from '../utils/parserEngine';
 import { exportToExcel } from '../utils/exportEngine';
 import { isSupabaseConfigured } from '../utils/supabase';
+import { getCurrentUser } from '../utils/authService';
 
 export default function HistoryModal({ isOpen, onClose, onSelectStatement }) {
   const [historyList, setHistoryList] = useState([]);
@@ -19,7 +20,8 @@ export default function HistoryModal({ isOpen, onClose, onSelectStatement }) {
   const loadHistory = async () => {
     setIsLoading(true);
     try {
-      const records = await getAllStatementsFromLocalDB();
+      const user = getCurrentUser();
+      const records = await getAllStatementsFromLocalDB(user?.id || null);
       setHistoryList(records);
     } catch (e) {
       console.error(e);

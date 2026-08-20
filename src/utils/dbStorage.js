@@ -42,12 +42,16 @@ function openDatabase() {
 // Save a statement to history
 export async function saveStatementToLocalDB(statementData) {
   try {
+    const currentUser = getCurrentUser();
+    const userId = currentUser?.id || 'guest_demo';
+
     const db = await openDatabase();
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
 
     const record = {
       id: 'stmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      userId,
       fileName: statementData.meta?.fileName || 'Banka_Ekstresi',
       bankName: statementData.meta?.bankName || 'Genel Ekstre',
       currency: statementData.meta?.currency || 'TRY',
@@ -63,7 +67,6 @@ export async function saveStatementToLocalDB(statementData) {
     };
 
     // Background sync to Supabase Cloud if user is authenticated
-    const currentUser = getCurrentUser();
     if (currentUser?.id) {
       syncStatementToCloud(statementData, currentUser.id).catch(() => {});
     }
@@ -79,9 +82,12 @@ export async function saveStatementToLocalDB(statementData) {
   }
 }
 
-// Get all saved statement history
-export async function getAllStatementsFromLocalDB() {
+// Get all saved statement history (strictly isolated per user account)
+export async function getAllStatementsFromLocalDB(targetUserId = null) {
   try {
+    const activeUser = targetUserId ? { id: targetUserId } : getCurrentUser();
+    const currentUserId = activeUser?.id || null;
+
     const db = await openDatabase();
     const tx = db.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
@@ -89,8 +95,21 @@ export async function getAllStatementsFromLocalDB() {
     return new Promise((resolve, reject) => {
       const req = store.getAll();
       req.onsuccess = () => {
-        const records = (req.result || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        resolve(records);
+        const allRecords = req.result || [];
+        
+        // Filter by user isolation:
+        const userRecords = allRecords.filter(r => {
+          if (currentUserId) {
+            // Logged in user: ONLY return their own statements, NEVER guest demos!
+            return r.userId === currentUserId;
+          } else {
+            // Guest visitor: ONLY return guest demos
+            return !r.userId || r.userId === 'guest_demo';
+          }
+        });
+
+        const sorted = userRecords.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        resolve(sorted);
       };
       req.onerror = () => reject(req.error);
     });
