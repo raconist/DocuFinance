@@ -61,71 +61,99 @@ export function formatCurrency(amount, currency = 'TRY', locale = 'tr-TR') {
 export function detectBankType(text) {
   const t = text.toUpperCase();
 
+  const isCard = t.includes('KREDİ KARTI') || 
+                 t.includes('KREDI KARTI') || 
+                 t.includes('HESAP ÖZETİ') || 
+                 t.includes('HESAP OZETI') || 
+                 t.includes('HESAP BILDIRIM CETVELI') || 
+                 t.includes('HESAP BİLDİRİM CETVELİ') || 
+                 t.includes('DÖNEM BORCU') || 
+                 t.includes('DONEM BORCU') || 
+                 t.includes('ASGARİ ÖDEME') || 
+                 t.includes('ASGARI ODEME') || 
+                 t.includes('ASGARİ TUTAR') || 
+                 t.includes('KART NO') || 
+                 t.includes('KART NUMARASI') || 
+                 t.includes('CREDIT CARD') || 
+                 t.includes('CARD STATEMENT') || 
+                 t.includes('BONUS CARD') || 
+                 t.includes('WORLDCARD') || 
+                 t.includes('MAXIMUM KART') || 
+                 t.includes('AXESS') || 
+                 t.includes('CARDFINANS') || 
+                 t.includes('BANKKART');
+
+  let baseBank = '';
+
   // --- 🇹🇷 TURKEY ---
-  if (t.includes('GARANTİ') || t.includes('GARANTI') || t.includes('T. GARANTI')) return 'Garanti BBVA';
-  if (t.includes('TÜRKİYE İŞ BANKASI') || t.includes('IS BANKASI') || t.includes('İŞ BANKASI')) return 'Türkiye İş Bankası';
-  if (t.includes('YAPI VE KREDİ') || t.includes('YAPI KREDI') || t.includes('YAPİKREDİ')) return 'Yapı Kredi';
-  if (t.includes('AKBANK')) return 'Akbank';
-  if (t.includes('ZİRAAT BANKASI') || t.includes('ZIRAAT')) return 'Ziraat Bankası';
-  if (t.includes('ENPARA.COM') || t.includes('ENPARA')) return 'Enpara.com';
-  if (t.includes('QNB FİNANSBANK') || t.includes('QNB FINANSBANK')) return 'QNB Finansbank';
-  if (t.includes('VAKIFBANK') || t.includes('VAKIF BANK')) return 'VakıfBank';
-  if (t.includes('HALKBANK') || t.includes('HALK BANKASI')) return 'Halkbank';
-  if (t.includes('PAPARA')) return 'Papara';
-  if (t.includes('DENİZBANK') || t.includes('DENIZBANK')) return 'DenizBank';
+  if (t.includes('GARANTİ') || t.includes('GARANTI') || t.includes('T. GARANTI') || t.includes('BONUS')) baseBank = 'Garanti BBVA';
+  else if (t.includes('TÜRKİYE İŞ BANKASI') || t.includes('IS BANKASI') || t.includes('İŞ BANKASI') || t.includes('MAXIMUM')) baseBank = 'Türkiye İş Bankası';
+  else if (t.includes('YAPI VE KREDİ') || t.includes('YAPI KREDI') || t.includes('YAPİKREDİ') || t.includes('WORLDCARD')) baseBank = 'Yapı Kredi';
+  else if (t.includes('AKBANK') || t.includes('AXESS') || t.includes('WINGS')) baseBank = 'Akbank';
+  else if (t.includes('ZİRAAT BANKASI') || t.includes('ZIRAAT') || t.includes('BANKKART')) baseBank = 'Ziraat Bankası';
+  else if (t.includes('ENPARA.COM') || t.includes('ENPARA')) baseBank = 'Enpara.com';
+  else if (t.includes('QNB FİNANSBANK') || t.includes('QNB FINANSBANK') || t.includes('CARDFINANS')) baseBank = 'QNB Finansbank';
+  else if (t.includes('VAKIFBANK') || t.includes('VAKIF BANK')) baseBank = 'VakıfBank';
+  else if (t.includes('HALKBANK') || t.includes('HALK BANKASI') || t.includes('PARAF')) baseBank = 'Halkbank';
+  else if (t.includes('PAPARA')) baseBank = 'Papara';
+  else if (t.includes('DENİZBANK') || t.includes('DENIZBANK')) baseBank = 'DenizBank';
 
   // --- 🇬🇧 UNITED KINGDOM (BRITISH BANKS) ---
-  if (t.includes('BARCLAYS')) return 'Barclays Bank UK';
-  if (t.includes('HSBC')) return 'HSBC UK';
-  if (t.includes('LLOYDS') || t.includes('LLOYDS BANK')) return 'Lloyds Bank';
-  if (t.includes('NATWEST') || t.includes('NATIONAL WESTMINSTER')) return 'NatWest Commercial';
-  if (t.includes('MONZO')) return 'Monzo Bank';
-  if (t.includes('STARLING')) return 'Starling Bank';
-  if (t.includes('STANDARD CHARTERED')) return 'Standard Chartered';
+  else if (t.includes('BARCLAYS')) baseBank = 'Barclays Bank UK';
+  else if (t.includes('HSBC')) baseBank = 'HSBC UK';
+  else if (t.includes('LLOYDS') || t.includes('LLOYDS BANK')) baseBank = 'Lloyds Bank';
+  else if (t.includes('NATWEST') || t.includes('NATIONAL WESTMINSTER')) baseBank = 'NatWest Commercial';
+  else if (t.includes('MONZO')) baseBank = 'Monzo Bank';
+  else if (t.includes('STARLING')) baseBank = 'Starling Bank';
+  else if (t.includes('STANDARD CHARTERED')) baseBank = 'Standard Chartered';
 
   // --- 🇫🇷 FRANCE (FRENCH BANKS) ---
-  if (t.includes('BNP PARIBAS') || t.includes('BNP')) return 'BNP Paribas';
-  if (t.includes('SOCIETE GENERALE') || t.includes('SOCIÉTÉ GÉNÉRALE') || t.includes('SOCGEN')) return 'Société Générale';
-  if (t.includes('CREDIT AGRICOLE') || t.includes('CRÉDIT AGRICOLE')) return 'Crédit Agricole';
-  if (t.includes('BPCE') || t.includes('BANQUE POPULAIRE') || t.includes('CAISSE D\'EPARGNE')) return 'Groupe BPCE';
-  if (t.includes('QONTO')) return 'Qonto Business';
-  if (t.includes('BOURSORAMA')) return 'Boursorama Banque';
+  else if (t.includes('BNP PARIBAS') || t.includes('BNP')) baseBank = 'BNP Paribas';
+  else if (t.includes('SOCIETE GENERALE') || t.includes('SOCIÉTÉ GÉNÉRALE') || t.includes('SOCGEN')) baseBank = 'Société Générale';
+  else if (t.includes('CREDIT AGRICOLE') || t.includes('CRÉDIT AGRICOLE')) baseBank = 'Crédit Agricole';
+  else if (t.includes('BPCE') || t.includes('BANQUE POPULAIRE') || t.includes('CAISSE D\'EPARGNE')) baseBank = 'Groupe BPCE';
+  else if (t.includes('QONTO')) baseBank = 'Qonto Business';
+  else if (t.includes('BOURSORAMA')) baseBank = 'Boursorama Banque';
 
   // --- 🇮🇹 ITALY (ITALIAN BANKS) ---
-  if (t.includes('INTESA SANPAOLO') || t.includes('SANPAOLO')) return 'Intesa Sanpaolo';
-  if (t.includes('UNICREDIT') || t.includes('UNI CREDIT')) return 'UniCredit Bank';
-  if (t.includes('BANCO BPM') || t.includes('BPM')) return 'Banco BPM';
-  if (t.includes('FINECO') || t.includes('FINECOBANK')) return 'FinecoBank';
-  if (t.includes('MONTE DEI PASCHI') || t.includes('MPS')) return 'Banca Monte dei Paschi';
-  if (t.includes('BANCOPOSTA') || t.includes('POSTE ITALIANE')) return 'Poste Italiane (BancoPosta)';
+  else if (t.includes('INTESA SANPAOLO') || t.includes('SANPAOLO')) baseBank = 'Intesa Sanpaolo';
+  else if (t.includes('UNICREDIT') || t.includes('UNI CREDIT')) baseBank = 'UniCredit Bank';
+  else if (t.includes('BANCO BPM') || t.includes('BPM')) baseBank = 'Banco BPM';
+  else if (t.includes('FINECO') || t.includes('FINECOBANK')) baseBank = 'FinecoBank';
+  else if (t.includes('MONTE DEI PASCHI') || t.includes('MPS')) baseBank = 'Banca Monte dei Paschi';
+  else if (t.includes('BANCOPOSTA') || t.includes('POSTE ITALIANE')) baseBank = 'Poste Italiane (BancoPosta)';
 
   // --- 🇩🇪 GERMANY & 🇨🇭 SWITZERLAND & 🇪🇸 SPAIN ---
-  if (t.includes('DEUTSCHE BANK')) return 'Deutsche Bank';
-  if (t.includes('COMMERZBANK')) return 'Commerzbank';
-  if (t.includes('UBS')) return 'UBS Switzerland';
-  if (t.includes('CREDIT SUISSE')) return 'Credit Suisse';
-  if (t.includes('SANTANDER')) return 'Banco Santander';
-  if (t.includes('BBVA')) return 'BBVA';
-  if (t.includes('ING') || t.includes('ING DIBA')) return 'ING Bank';
-  if (t.includes('N26')) return 'N26 Bank';
+  else if (t.includes('DEUTSCHE BANK')) baseBank = 'Deutsche Bank';
+  else if (t.includes('COMMERZBANK')) baseBank = 'Commerzbank';
+  else if (t.includes('UBS')) baseBank = 'UBS Switzerland';
+  else if (t.includes('CREDIT SUISSE')) baseBank = 'Credit Suisse';
+  else if (t.includes('SANTANDER')) baseBank = 'Banco Santander';
+  else if (t.includes('BBVA')) baseBank = 'BBVA';
+  else if (t.includes('ING') || t.includes('ING DIBA')) baseBank = 'ING Bank';
+  else if (t.includes('N26')) baseBank = 'N26 Bank';
 
   // --- 🇺🇸 USA ---
-  if (t.includes('CHASE') || t.includes('JPMORGAN CHASE')) return 'JPMorgan Chase';
-  if (t.includes('BANK OF AMERICA') || t.includes('BOA')) return 'Bank of America';
-  if (t.includes('WELLS FARGO')) return 'Wells Fargo';
-  if (t.includes('CITIBANK') || t.includes('CITI')) return 'Citibank';
-  if (t.includes('CAPITAL ONE')) return 'Capital One';
-  if (t.includes('MERCURY')) return 'Mercury Bank';
+  else if (t.includes('CHASE') || t.includes('JPMORGAN CHASE')) baseBank = 'JPMorgan Chase';
+  else if (t.includes('BANK OF AMERICA') || t.includes('BOA')) baseBank = 'Bank of America';
+  else if (t.includes('WELLS FARGO')) baseBank = 'Wells Fargo';
+  else if (t.includes('CITIBANK') || t.includes('CITI')) baseBank = 'Citibank';
+  else if (t.includes('CAPITAL ONE')) baseBank = 'Capital One';
+  else if (t.includes('MERCURY')) baseBank = 'Mercury Bank';
 
   // --- 🌐 GLOBAL FINTECH & E-COMMERCE ---
-  if (t.includes('REVOLUT')) return 'Revolut';
-  if (t.includes('WISE') || t.includes('TRANSFERWISE')) return 'Wise Payments';
-  if (t.includes('STRIPE')) return 'Stripe Payouts';
-  if (t.includes('PAYPAL')) return 'PayPal';
-  if (t.includes('SHOPIFY')) return 'Shopify Balance';
-  if (t.includes('E-FATURA') || t.includes('E-ARŞİV') || t.includes('FATURA NO') || t.includes('INVOICE') || t.includes('RECHNUNG') || t.includes('FACTURE') || t.includes('FATTURA')) return 'E-Fatura / Fatura';
+  else if (t.includes('REVOLUT')) baseBank = 'Revolut';
+  else if (t.includes('WISE') || t.includes('TRANSFERWISE')) baseBank = 'Wise Payments';
+  else if (t.includes('STRIPE')) baseBank = 'Stripe Payouts';
+  else if (t.includes('PAYPAL')) baseBank = 'PayPal';
+  else if (t.includes('SHOPIFY')) baseBank = 'Shopify Balance';
+  else if (t.includes('E-FATURA') || t.includes('E-ARŞİV') || t.includes('FATURA NO') || t.includes('INVOICE') || t.includes('RECHNUNG') || t.includes('FACTURE') || t.includes('FATTURA')) return 'E-Fatura / Fatura';
 
-  return 'Genel Finansal Ekstre';
+  if (isCard) {
+    return baseBank ? `${baseBank} Kredi Kartı Ekstresi` : 'Kredi Kartı Hesap Özeti';
+  }
+
+  return baseBank || 'Genel Finansal Ekstre';
 }
 
 // Auto-detect primary currency from text
@@ -139,7 +167,7 @@ export function detectCurrency(text) {
 }
 
 /**
- * Intelligent Multi-Bank Parser
+ * Intelligent Multi-Bank & Credit Card Statement Parser
  */
 export function parseFinancialContent(rawText) {
   if (!rawText || !rawText.trim()) {
@@ -148,6 +176,33 @@ export function parseFinancialContent(rawText) {
 
   const bankName = detectBankType(rawText);
   const currency = detectCurrency(rawText);
+  const upperRaw = rawText.toUpperCase();
+
+  // Detect if this document is a Credit Card Statement
+  const isCreditCard = upperRaw.includes('KREDİ KARTI') || 
+                       upperRaw.includes('KREDI KARTI') || 
+                       upperRaw.includes('HESAP ÖZETİ') || 
+                       upperRaw.includes('HESAP OZETI') || 
+                       upperRaw.includes('HESAP BILDIRIM') || 
+                       upperRaw.includes('HESAP BİLDİRİM') || 
+                       upperRaw.includes('DÖNEM BORCU') || 
+                       upperRaw.includes('DONEM BORCU') || 
+                       upperRaw.includes('ASGARİ ÖDEME') || 
+                       upperRaw.includes('ASGARI ODEME') || 
+                       upperRaw.includes('ASGARİ TUTAR') || 
+                       upperRaw.includes('SON ÖDEME') || 
+                       upperRaw.includes('SON ODEME') || 
+                       upperRaw.includes('CREDIT CARD') || 
+                       upperRaw.includes('CARD STATEMENT') || 
+                       upperRaw.includes('KART NO') || 
+                       upperRaw.includes('KART HAREKET') ||
+                       upperRaw.includes('WORLDCARD') || 
+                       upperRaw.includes('BONUS') || 
+                       upperRaw.includes('AXESS') || 
+                       upperRaw.includes('MAXIMUM KART') || 
+                       upperRaw.includes('CARDFINANS') || 
+                       upperRaw.includes('BANKKART');
+
   const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
   const transactions = [];
@@ -158,21 +213,23 @@ export function parseFinancialContent(rawText) {
   const dateRegex = /\b(\d{2}[./-]\d{2}[./-]\d{4}|\d{4}[./-]\d{2}[./-]\d{2}|\d{2}\s+[A-Za-z]{3}\s+\d{4})\b/;
   const amountPattern = /[-+]?\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})\b/g;
 
-  // Scan lines
+  // Scan lines for balances & header info
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const upperLine = line.toUpperCase();
 
-    // Check for Devir/Açılış/Starting balance in headers (TR, EN, DE, FR, IT)
+    // Check for Devir/Açılış/Önceki Bakiye in headers
     if (startingBalance === null && (
       upperLine.includes('DEVREDEN') || 
       upperLine.includes('ÖNCEKİ BAKİYE') || 
+      upperLine.includes('ONCEKI BAKIYE') || 
+      upperLine.includes('ÖNCEKİ DÖNEM BORCU') || 
+      upperLine.includes('ONCEKI DONEM BORCU') || 
       upperLine.includes('STARTING BALANCE') || 
       upperLine.includes('OPENING BALANCE') || 
-      upperLine.includes('BEGINNING BALANCE') || 
+      upperLine.includes('PREVIOUS BALANCE') || 
       upperLine.includes('ANFANGSSALDO') || 
       upperLine.includes('SOLDE INITIAL') || 
-      upperLine.includes('SALDO INIZIALE') || 
       upperLine.includes('BAŞLANGIÇ BAKİYESİ')
     )) {
       const amounts = line.match(amountPattern);
@@ -181,15 +238,19 @@ export function parseFinancialContent(rawText) {
       }
     }
 
-    // Check for Kapanış/Bitiş/Ending balance
+    // Check for Kapanış/Bitiş/Dönem Borcu
     if (
+      upperLine.includes('DÖNEM BORCU') || 
+      upperLine.includes('DONEM BORCU') || 
+      upperLine.includes('TOPLAM BORÇ') || 
+      upperLine.includes('EKSTRE BORCU') || 
+      upperLine.includes('ÖDENECEK TUTAR') || 
       upperLine.includes('KAPANIŞ BAKİYESİ') || 
       upperLine.includes('ENDING BALANCE') || 
       upperLine.includes('GÜNCEL BAKİYE') || 
       upperLine.includes('CLOSING BALANCE') || 
       upperLine.includes('ENDSALDO') || 
-      upperLine.includes('SOLDE FINAL') || 
-      upperLine.includes('SALDO FINALE')
+      upperLine.includes('NEW BALANCE')
     ) {
       const amounts = line.match(amountPattern);
       if (amounts && amounts.length > 0) {
@@ -212,8 +273,53 @@ export function parseFinancialContent(rawText) {
     let credit = 0;
     let balance = 0;
 
+    // Check line semantic markers for Payments / Refunds vs Expenses / Purchases
+    const hasAlacakOrPayment = 
+      upperLine.includes('ÖDEME') || 
+      upperLine.includes('ODEME') || 
+      upperLine.includes('ÖDENDİ') || 
+      upperLine.includes('ODENDI') || 
+      upperLine.includes('İADE') || 
+      upperLine.includes('IADE') || 
+      upperLine.includes('REFUND') || 
+      upperLine.includes('ALACAK') || 
+      upperLine.includes('TAHSİLAT') || 
+      upperLine.includes('TAHSILAT') || 
+      upperLine.includes('GELEN') || 
+      upperLine.includes('YATAN') || 
+      upperLine.includes('PAYMENT') || 
+      /\b(A|CR|\+)\b/.test(upperLine) || 
+      upperLine.endsWith(' A') || 
+      upperLine.endsWith(' CR') || 
+      upperLine.endsWith(' +');
+
+    const hasBorcOrExpense = 
+      upperLine.includes('BORÇ') || 
+      upperLine.includes('BORC') || 
+      upperLine.includes('HARCAMA') || 
+      upperLine.includes('SATIŞ') || 
+      upperLine.includes('SATIS') || 
+      upperLine.includes('POS') || 
+      upperLine.includes('ALIŞVERİŞ') || 
+      upperLine.includes('ALISVERIS') || 
+      upperLine.includes('FAİZ') || 
+      upperLine.includes('FAIZ') || 
+      upperLine.includes('KOMİSYON') || 
+      upperLine.includes('KOMISYON') || 
+      upperLine.includes('BSMV') || 
+      upperLine.includes('KKDF') || 
+      upperLine.includes('AİDAT') || 
+      upperLine.includes('AIDAT') || 
+      upperLine.includes('ÜCRET') || 
+      upperLine.includes('UCRET') || 
+      upperLine.includes('MASRAF') || 
+      /\b(B|DR|-)\b/.test(upperLine) || 
+      upperLine.endsWith(' B') || 
+      upperLine.endsWith(' DR') || 
+      upperLine.endsWith(' -');
+
     if (amounts.length >= 3) {
-      // Format: Debit, Credit, Balance OR Amount, Balance
+      // 3 amounts: [Debit, Credit, Balance] or [Amount, Tax, Balance]
       const val1 = parseFinancialNumber(amounts[0]);
       const val2 = parseFinancialNumber(amounts[1]);
       const val3 = parseFinancialNumber(amounts[2]);
@@ -225,50 +331,137 @@ export function parseFinancialContent(rawText) {
         credit = val2;
         balance = val3;
       } else if (val1 > 0 && val2 > 0) {
-        debit = val1;
-        credit = val2;
-        balance = val3;
+        if (isCreditCard) {
+          if (hasAlacakOrPayment) {
+            credit = val1;
+            balance = val3;
+          } else {
+            debit = val1;
+            balance = val3;
+          }
+        } else {
+          debit = val1;
+          credit = val2;
+          balance = val3;
+        }
       } else {
-        debit = val1 < 0 ? Math.abs(val1) : 0;
-        credit = val1 > 0 ? val1 : 0;
-        balance = val2;
+        if (isCreditCard) {
+          if (hasAlacakOrPayment) credit = Math.abs(val1);
+          else debit = Math.abs(val1);
+        } else {
+          debit = val1 < 0 ? Math.abs(val1) : (hasBorcOrExpense ? val1 : 0);
+          credit = val1 > 0 ? (hasAlacakOrPayment ? val1 : val1) : 0;
+        }
+        balance = val2 || val3;
       }
     } else if (amounts.length === 2) {
-      const amountVal = parseFinancialNumber(amounts[0]);
-      balance = parseFinancialNumber(amounts[1]);
+      // 2 amounts: [Amount, Balance] or [Debit, Credit]
+      const val1 = parseFinancialNumber(amounts[0]);
+      const val2 = parseFinancialNumber(amounts[1]);
 
-      if (amounts[0].includes('-') || afterDate.toUpperCase().includes('BORÇ') || afterDate.toUpperCase().includes('DEBIT') || afterDate.toUpperCase().includes('SOLL') || afterDate.toUpperCase().includes('DÉBIT')) {
-        debit = Math.abs(amountVal);
-      } else if (amounts[0].includes('+') || afterDate.toUpperCase().includes('ALACAK') || afterDate.toUpperCase().includes('CREDIT') || afterDate.toUpperCase().includes('HABEN') || afterDate.toUpperCase().includes('CRÉDIT')) {
-        credit = Math.abs(amountVal);
+      balance = val2;
+
+      if (isCreditCard) {
+        // In Credit Cards: Purchases are DEBIT (Harcama/Borç/Çıkan), Payments/Refunds are CREDIT (Alacak/Giren)
+        if (hasAlacakOrPayment || amounts[0].includes('+') || (amounts[0].includes('-') && !hasBorcOrExpense)) {
+          credit = Math.abs(val1);
+        } else {
+          debit = Math.abs(val1);
+        }
       } else {
-        if (amountVal < 0) debit = Math.abs(amountVal);
-        else credit = amountVal;
+        // Checking / Deposit bank account
+        if (amounts[0].includes('-') || hasBorcOrExpense || val1 < 0) {
+          debit = Math.abs(val1);
+        } else if (amounts[0].includes('+') || hasAlacakOrPayment) {
+          credit = Math.abs(val1);
+        } else {
+          // Check common expense vendor names
+          const isExp = /MARKET|PETROL|BENZIN|SHELL|OPET|BP|TOTAL|AYGAZ|MIGROS|BIM|A101|SOK|CARREFOUR|RESTORAN|CAFE|YEMEK|STARBUCKS|TRENDYOL|HEPSIBURADA|AMAZON|N11|ZARA|LCW|BOYNER|ECZANE|HASTANE|OTEL|UBER|BITAKSI|TURKCELL|VODAFONE|TURK TELEKOM|NETFLIX|SPOTIFY|APPLE|GOOGLE|FATURA|KIRA|AIDAT|GIDER|MASRAF|POS|EFT GIDEN|HAVALE GIDEN/i.test(upperLine);
+          if (isExp) debit = Math.abs(val1);
+          else credit = Math.abs(val1);
+        }
       }
     } else if (amounts.length === 1) {
+      // 1 single amount
       const amountVal = parseFinancialNumber(amounts[0]);
-      if (amountVal < 0 || amounts[0].includes('-')) {
-        debit = Math.abs(amountVal);
+
+      if (isCreditCard) {
+        // In Credit Card statements: All regular purchases are DEBIT (Harcama / Çıkan / Gider)
+        if (hasAlacakOrPayment || amounts[0].includes('+')) {
+          credit = Math.abs(amountVal); // Card payment, refund, or cashback
+        } else {
+          debit = Math.abs(amountVal); // Card purchase / expenditure
+        }
       } else {
-        credit = Math.abs(amountVal);
+        // Checking account
+        if (amountVal < 0 || amounts[0].includes('-') || hasBorcOrExpense) {
+          debit = Math.abs(amountVal);
+        } else if (hasAlacakOrPayment || amounts[0].includes('+')) {
+          credit = Math.abs(amountVal);
+        } else {
+          // Detect expense by vendor / store keywords
+          const isExp = /MARKET|PETROL|BENZIN|SHELL|OPET|BP|TOTAL|AYGAZ|MIGROS|BIM|A101|SOK|CARREFOUR|RESTORAN|CAFE|YEMEK|STARBUCKS|TRENDYOL|HEPSIBURADA|AMAZON|N11|ZARA|LCW|BOYNER|ECZANE|HASTANE|OTEL|UBER|BITAKSI|TURKCELL|VODAFONE|TURK TELEKOM|NETFLIX|SPOTIFY|APPLE|GOOGLE|FATURA|KIRA|AIDAT|GIDER|MASRAF|POS/i.test(upperLine);
+          if (isExp) {
+            debit = Math.abs(amountVal);
+          } else {
+            credit = Math.abs(amountVal);
+          }
+        }
       }
     }
 
-    // Clean description by removing extracted amounts
+    // Clean description by removing extracted amounts & markers
     let cleanDesc = afterDate;
     amounts.forEach(amt => {
       cleanDesc = cleanDesc.replace(amt, '');
     });
-    cleanDesc = cleanDesc.replace(/[₺$€£TLUSDGBPCHF]/gi, '').replace(/\s+/g, ' ').trim();
+    cleanDesc = cleanDesc
+      .replace(/[₺$€£TLUSDGBPCHF]/gi, '')
+      .replace(/\s+[AB]\s*$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     if (!cleanDesc || cleanDesc.length < 2) {
-      cleanDesc = 'Banka Hesap Hareketi';
+      cleanDesc = isCreditCard ? 'Kredi Kartı Harcaması' : 'Banka Hesap Hareketi';
+    }
+
+    // Smart default TDHP code & category
+    let defaultCategory = 'Genel Giderler';
+    let defaultAccountCode = '770.01';
+
+    if (credit > 0) {
+      if (isCreditCard) {
+        defaultCategory = 'Kredi Kartı Ödemesi / İade';
+        defaultAccountCode = '102.01';
+      } else {
+        defaultCategory = 'Satış & Gelirler';
+        defaultAccountCode = '600.01';
+      }
+    } else {
+      if (/SHELL|OPET|BP |PETROL|BENZIN|TOTAL|AYGAZ|LUKOIL/i.test(cleanDesc)) {
+        defaultCategory = 'Taşıt & Akaryakıt';
+        defaultAccountCode = '770.03';
+      } else if (/MIGROS|BIM |A101|SOK |CARREFOUR|METRO|YEMEK|RESTORAN|CAFE|KAHVE|STARBUCKS/i.test(cleanDesc)) {
+        defaultCategory = 'Temsil, Ağırlama & Yemek';
+        defaultAccountCode = '770.02';
+      } else if (/TURKCELL|VODAFONE|TURK TELEKOM|TTNET|SUPERONLINE/i.test(cleanDesc)) {
+        defaultCategory = 'İletişim & Haberleşme';
+        defaultAccountCode = '770.04';
+      } else if (/GOOGLE|AWS|MICROSOFT|APPLE|NETFLIX|SPOTIFY|ADOBE|OPENAI/i.test(cleanDesc)) {
+        defaultCategory = 'Yazılım & Bulut Hizmetleri';
+        defaultAccountCode = '770.07';
+      } else if (/BSMV|KKDF|KOMISYON|FAIZ|AIDAT|UCRET|MASRAF/i.test(cleanDesc)) {
+        defaultCategory = 'Banka Masraf & Komisyonları';
+        defaultAccountCode = '770.09';
+      }
     }
 
     transactions.push({
       id: `tx_${Date.now()}_${transactions.length + 1}`,
       date: dateStr,
       description: cleanDesc,
-      category: 'Genel',
+      category: defaultCategory,
+      accountCode: defaultAccountCode,
       debit: debit,
       credit: credit,
       amount: credit - debit,
@@ -303,12 +496,15 @@ export function parseFinancialContent(rawText) {
     }
   }
 
-  const calculatedEnding = startingBalance + totalCredit - totalDebit;
+  const calculatedEnding = isCreditCard 
+    ? (startingBalance + totalDebit - totalCredit) // For credit card debt: Previous Debt + New Purchases - Payments
+    : (startingBalance + totalCredit - totalDebit); // For bank account: Starting Balance + Inflows - Outflows
+
   if (endingBalance === null) {
     endingBalance = transactions[transactions.length - 1].balance || calculatedEnding;
   }
 
-  const netFlow = totalCredit - totalDebit;
+  const netFlow = isCreditCard ? (totalDebit - totalCredit) : (totalCredit - totalDebit);
   const discrepancy = Math.abs(calculatedEnding - endingBalance);
   const isReconciled = discrepancy < 0.05;
 
@@ -316,6 +512,7 @@ export function parseFinancialContent(rawText) {
     meta: {
       bankName: bankName,
       currency: currency,
+      isCreditCard: isCreditCard,
       transactionCount: transactions.length,
       startingBalance: startingBalance,
       endingBalance: endingBalance,

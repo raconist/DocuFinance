@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FileSpreadsheet, 
   Download, 
@@ -17,29 +17,33 @@ import {
   Sparkles, 
   RotateCcw, 
   Copy, 
-  FileText,
-  FileCode,
-  PieChart,
-  ArrowLeft,
-  Printer,
-  ArrowUpDown,
-  DollarSign,
-  Layers,
-  Building2,
-  BookOpen,
-  CheckSquare,
-  Square,
-  ChevronDown,
-  Scale,
-  FileCheck2,
-  TrendingUp,
-  BarChart3
+  FileText, 
+  FileCode, 
+  PieChart, 
+  ArrowLeft, 
+  Printer, 
+  ArrowUpDown, 
+  DollarSign, 
+  Layers, 
+  Building2, 
+  BookOpen, 
+  CheckSquare, 
+  Square, 
+  ChevronDown, 
+  Scale, 
+  FileCheck2, 
+  TrendingUp, 
+  BarChart3,
+  Save,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency, parseFinancialNumber } from '../utils/parserEngine';
 import { maskSensitiveData } from '../utils/security';
 import { exportToExcel } from '../utils/exportEngine';
 import { applyRulesToTransactions } from '../utils/rulesEngine';
 import { detectDuplicates, removeDuplicateRows } from '../utils/duplicateDetector';
+import { saveStatementToLocalDB } from '../utils/dbStorage';
 import ExportModal from './ExportModal';
 import RulesModal from './RulesModal';
 import ReconciliationModal from './ReconciliationModal';
@@ -51,15 +55,31 @@ import { categorizeTransactions } from '../utils/accountingRules';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
 
+// Helper to ensure every single row has a permanent, unique ID (preventing sorting index mismatch)
+function ensureUniqueRowIds(dataObj) {
+  if (!dataObj) return dataObj;
+  const rows = (dataObj.rows || []).map((r, idx) => ({
+    ...r,
+    id: (r.id && typeof r.id === 'string' && r.id.length > 3) 
+      ? r.id 
+      : `row_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`
+  }));
+  return {
+    ...dataObj,
+    rows
+  };
+}
+
 export default function DataStudio({ 
   parsedData, 
   onReset, 
   onOpenPricing, 
-  isProUser = false,
-  lang = 'tr',
+  onUpdateData,
+  isProUser = false, 
+  lang = 'tr', 
   theme = 'dark' 
 }) {
-  const [data, setData] = useState(parsedData);
+  const [data, setData] = useState(() => ensureUniqueRowIds(parsedData));
   const [isMasked, setIsMasked] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -70,6 +90,8 @@ export default function DataStudio({
   const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(true);
   const [exportSuccessMsg, setExportSuccessMsg] = useState(null);
   const [activeViewMode, setActiveViewMode] = useState('table'); // 'table' | 'analytics'
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'unsaved' | 'saving' | 'saved'
   
   // Modals State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -86,8 +108,9 @@ export default function DataStudio({
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
 
-  React.useEffect(() => {
-    setData(parsedData);
+  useEffect(() => {
+    const sanitized = ensureUniqueRowIds(parsedData);
+    setData(sanitized);
     setCustomCurrency(parsedData.meta?.currency || 'TRY');
     setSelectedRowIds(new Set());
   }, [parsedData]);
@@ -200,27 +223,77 @@ export default function DataStudio({
     return Array.from(set);
   }, [data.rows]);
 
-  const handleCellEdit = (rowIndex, field, value) => {
-    const updatedRows = [...data.rows];
-    const targetRow = { ...updatedRows[rowIndex] };
-
-    if (field === 'debit' || field === 'credit' || field === 'balance') {
-      targetRow[field] = parseFinancialNumber(value);
-      targetRow.amount = (targetRow.credit || 0) - (targetRow.debit || 0);
-    } else {
-      targetRow[field] = value;
+  // Save data persistently to IndexedDB & notify parent
+  const handleSaveData = async (overrideData = null) => {
+    const dataToSave = overrideData || data;
+    setIsSaving(true);
+    setSaveStatus('saving');
+    try {
+      const savedRecord = await saveStatementToLocalDB(dataToSave);
+      if (savedRecord && savedRecord.data) {
+        setData(savedRecord.data);
+        onUpdateData?.(savedRecord.data);
+      } else {
+        onUpdateData?.(dataToSave);
+      }
+      setSaveStatus('saved');
+      setExportSuccessMsg('✓ Yapılan tüm değişiklikler ve finansal tutarlar güvenle kaydedildi!');
+      try {
+        confetti({ particleCount: 50, spread: 45, origin: { y: 0.8 } });
+      } catch (e) {}
+      setTimeout(() => {
+        setExportSuccessMsg(null);
+        setSaveStatus('idle');
+      }, 3500);
+    } catch (err) {
+      console.error('Save error:', err);
+      setExportSuccessMsg('Kaydetme sırasında bir sorun oluştu.');
+      setSaveStatus('idle');
+      setTimeout(() => setExportSuccessMsg(null), 3000);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    updatedRows[rowIndex] = targetRow;
-    setData({
+  // Keyboard shortcut: Ctrl + S / Cmd + S to Save
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        handleSaveData();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [data]);
+
+  const handleCellEdit = (rowId, field, value) => {
+    const updatedRows = (data.rows || []).map((r) => {
+      if (r.id !== rowId) return r;
+
+      const targetRow = { ...r };
+      if (field === 'debit' || field === 'credit' || field === 'balance') {
+        targetRow[field] = parseFinancialNumber(value);
+        targetRow.amount = (targetRow.credit || 0) - (targetRow.debit || 0);
+      } else {
+        targetRow[field] = value;
+      }
+      return targetRow;
+    });
+
+    const updatedData = {
       ...data,
       rows: updatedRows
-    });
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
   };
 
   const handleAddRow = () => {
+    const newId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const newRow = {
-      id: 'tx_custom_' + Date.now(),
+      id: newId,
       date: new Date().toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US'),
       description: 'Yeni Finansal Hareket',
       category: 'Genel Giderler',
@@ -231,36 +304,48 @@ export default function DataStudio({
       balance: stats.calculatedEnding,
       isVerified: true
     };
-    setData({
+    const updatedData = {
       ...data,
-      rows: [newRow, ...(data.rows || [])]
-    });
+      rows: [...(data.rows || []), newRow]
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
   };
 
-  const handleDeleteRow = (rowIndex) => {
-    const updated = data.rows.filter((_, i) => i !== rowIndex);
-    setData({
+  const handleDeleteRow = (rowId) => {
+    const updatedRows = (data.rows || []).filter(r => r.id !== rowId);
+    const updatedData = {
       ...data,
-      rows: updated
-    });
+      rows: updatedRows
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
   };
 
   const handleCleanDuplicates = () => {
     const cleaned = removeDuplicateRows(data.rows || []);
-    setData({
+    const updatedData = {
       ...data,
       rows: cleaned
-    });
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
     setExportSuccessMsg('Mükerrer (çift) kayıtlar tablodan başarıyla temizlendi!');
     setTimeout(() => setExportSuccessMsg(null), 3500);
   };
 
   const handleApplyRules = (customRules) => {
     const updated = applyRulesToTransactions(data.rows || [], customRules);
-    setData({
+    const updatedData = {
       ...data,
       rows: updated
-    });
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
   };
 
   const handleToggleSelectAll = () => {
@@ -286,18 +371,24 @@ export default function DataStudio({
     if (selectedRowIds.size === 0) return;
     if (window.confirm(`Seçili ${selectedRowIds.size} satırı silmek istediğinize emin misiniz?`)) {
       const remaining = (data.rows || []).filter((r, i) => !selectedRowIds.has(r.id || `row_${i}`));
-      setData({ ...data, rows: remaining });
+      const updatedData = { ...data, rows: remaining };
+      setData(updatedData);
       setSelectedRowIds(new Set());
+      setSaveStatus('unsaved');
+      onUpdateData?.(updatedData);
     }
   };
 
   const handleAutoCategorize = () => {
     const standard = lang === 'tr' ? 'tdhp' : lang === 'de' ? 'datev' : 'gaap';
     const categorized = categorizeTransactions(data.rows || [], standard);
-    setData(prev => ({
-      ...prev,
+    const updatedData = {
+      ...data,
       rows: categorized
-    }));
+    };
+    setData(updatedData);
+    setSaveStatus('unsaved');
+    onUpdateData?.(updatedData);
     try {
       confetti({ particleCount: 70, spread: 55, origin: { y: 0.7 } });
     } catch (e) {}
@@ -464,6 +555,39 @@ export default function DataStudio({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           
+          {/* Persistent Save Button */}
+          <button
+            onClick={() => handleSaveData()}
+            disabled={isSaving}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-extrabold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md ${
+              saveStatus === 'saved'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                : saveStatus === 'unsaved'
+                  ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 border-amber-400 shadow-amber-500/20 ring-2 ring-amber-400/50'
+                  : isDark 
+                    ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-emerald-500/30' 
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300'
+            }`}
+            title="Değişiklikleri Kalıcı Kaydet (Kısayol: Ctrl + S)"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saveStatus === 'saved' ? (
+              <Check className="w-4 h-4 stroke-[3]" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>
+              {isSaving 
+                ? 'Kaydediliyor...' 
+                : saveStatus === 'saved' 
+                  ? 'Kaydedildi ✓' 
+                  : saveStatus === 'unsaved' 
+                    ? 'Değişiklikleri Kaydet *' 
+                    : 'Kaydet'}
+            </span>
+          </button>
+
           <button
             onClick={() => setIsMasked(!isMasked)}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
@@ -784,7 +908,7 @@ export default function DataStudio({
             ) : (
               filteredAndSortedRows.map((row, index) => {
                 const desc = isMasked ? maskSensitiveData(row.description) : row.description;
-                const rowId = row.id || `row_${index}`;
+                const rowId = row.id;
                 const isSelected = selectedRowIds.has(rowId);
 
                 return (
@@ -809,7 +933,7 @@ export default function DataStudio({
                       <input
                         type="text"
                         value={row.date || ''}
-                        onChange={(e) => handleCellEdit(index, 'date', e.target.value)}
+                        onChange={(e) => handleCellEdit(rowId, 'date', e.target.value)}
                         className={`bg-transparent text-xs font-mono border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
                           isDark ? 'text-slate-200' : 'text-slate-800'
                         }`}
@@ -826,7 +950,7 @@ export default function DataStudio({
                         <input
                           type="text"
                           value={desc}
-                          onChange={(e) => handleCellEdit(index, 'description', e.target.value)}
+                          onChange={(e) => handleCellEdit(rowId, 'description', e.target.value)}
                           className={`bg-transparent text-xs border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-medium ${
                             isDark ? 'text-slate-100' : 'text-slate-950'
                           }`}
@@ -838,7 +962,7 @@ export default function DataStudio({
                       <input
                         type="text"
                         value={row.category || 'Genel Giderler'}
-                        onChange={(e) => handleCellEdit(index, 'category', e.target.value)}
+                        onChange={(e) => handleCellEdit(rowId, 'category', e.target.value)}
                         className={`bg-transparent text-xs font-medium border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
                           isDark ? 'text-slate-300' : 'text-slate-700'
                         }`}
@@ -849,7 +973,7 @@ export default function DataStudio({
                       <input
                         type="text"
                         value={row.accountCode || (row.credit > 0 ? '600.01' : '770.01')}
-                        onChange={(e) => handleCellEdit(index, 'accountCode', e.target.value)}
+                        onChange={(e) => handleCellEdit(rowId, 'accountCode', e.target.value)}
                         className="bg-transparent text-xs font-mono font-bold text-amber-400 border-b border-transparent hover:border-slate-500 focus:border-amber-500 px-1 py-1 rounded w-full outline-none"
                       />
                     </td>
@@ -859,7 +983,7 @@ export default function DataStudio({
                         type="text"
                         value={row.debit > 0 ? row.debit : ''}
                         placeholder="0.00"
-                        onChange={(e) => handleCellEdit(index, 'debit', e.target.value)}
+                        onChange={(e) => handleCellEdit(rowId, 'debit', e.target.value)}
                         className="bg-transparent text-xs font-mono text-rose-500 text-right border-b border-transparent hover:border-slate-500 focus:border-rose-500 px-1 py-1 rounded w-full outline-none font-bold"
                       />
                     </td>
@@ -869,7 +993,7 @@ export default function DataStudio({
                         type="text"
                         value={row.credit > 0 ? row.credit : ''}
                         placeholder="0.00"
-                        onChange={(e) => handleCellEdit(index, 'credit', e.target.value)}
+                        onChange={(e) => handleCellEdit(rowId, 'credit', e.target.value)}
                         className="bg-transparent text-xs font-mono text-emerald-500 text-right border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-bold"
                       />
                     </td>
@@ -882,7 +1006,7 @@ export default function DataStudio({
 
                     <td className="text-center">
                       <button
-                        onClick={() => handleDeleteRow(index)}
+                        onClick={() => handleDeleteRow(rowId)}
                         className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
                         title="Bu satırı sil"
                       >

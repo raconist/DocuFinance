@@ -329,6 +329,7 @@ export default function App() {
                 parsedData={parsedData}
                 onReset={handleGoHome}
                 onOpenPricing={() => setIsPricingOpen(true)}
+                onUpdateData={(updatedData) => setParsedData(updatedData)}
                 isProUser={isProUser}
                 lang={lang}
                 theme={theme}
@@ -423,6 +424,10 @@ export default function App() {
         user={currentUser}
         onLogout={handleLogout}
         onOpenPricing={() => setIsPricingOpen(true)}
+        onSelectStatement={(data) => {
+          setParsedData(data);
+          setCurrentView('app');
+        }}
         theme={theme}
         lang={lang}
       />

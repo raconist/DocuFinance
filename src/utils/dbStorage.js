@@ -39,7 +39,7 @@ function openDatabase() {
   });
 }
 
-// Save a statement to history
+// Save or update a statement in history
 export async function saveStatementToLocalDB(statementData) {
   try {
     const currentUser = getCurrentUser();
@@ -49,26 +49,54 @@ export async function saveStatementToLocalDB(statementData) {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
 
+    // Reuse existing ID if statement was previously saved or loaded
+    const recordId = statementData.id || statementData.meta?.dbId || ('stmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
+
+    // Calculate dynamic totals from current rows
+    let totalDebit = 0;
+    let totalCredit = 0;
+    (statementData.rows || []).forEach(r => {
+      totalDebit += (Number(r.debit) || 0);
+      totalCredit += (Number(r.credit) || 0);
+    });
+
+    const startingBalance = Number(statementData.meta?.startingBalance) || 0;
+    const endingBalance = startingBalance + totalCredit - totalDebit;
+
+    const enrichedData = {
+      ...statementData,
+      id: recordId,
+      meta: {
+        ...statementData.meta,
+        dbId: recordId,
+        totalCredit,
+        totalDebit,
+        netFlow: totalCredit - totalDebit,
+        endingBalance
+      }
+    };
+
     const record = {
-      id: 'stmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      id: recordId,
       userId,
-      fileName: statementData.meta?.fileName || 'Banka_Ekstresi',
-      bankName: statementData.meta?.bankName || 'Genel Ekstre',
-      currency: statementData.meta?.currency || 'TRY',
-      transactionCount: statementData.rows?.length || 0,
-      totalCredit: statementData.meta?.totalCredit || 0,
-      totalDebit: statementData.meta?.totalDebit || 0,
-      netFlow: statementData.meta?.netFlow || 0,
-      endingBalance: statementData.meta?.endingBalance || 0,
-      documentHash: statementData.meta?.documentHash || '',
-      isReconciled: statementData.meta?.isReconciled ?? true,
-      data: statementData,
-      createdAt: new Date().toISOString()
+      fileName: enrichedData.meta?.fileName || 'Banka_Ekstresi',
+      bankName: enrichedData.meta?.bankName || 'Genel Ekstre',
+      currency: enrichedData.meta?.currency || 'TRY',
+      transactionCount: enrichedData.rows?.length || 0,
+      totalCredit: totalCredit,
+      totalDebit: totalDebit,
+      netFlow: totalCredit - totalDebit,
+      endingBalance: endingBalance,
+      documentHash: enrichedData.meta?.documentHash || '',
+      isReconciled: Math.abs(endingBalance - (Number(enrichedData.meta?.endingBalance) || endingBalance)) < 0.05,
+      data: enrichedData,
+      createdAt: statementData.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     // Background sync to Supabase Cloud if user is authenticated
     if (currentUser?.id) {
-      syncStatementToCloud(statementData, currentUser.id).catch(() => {});
+      syncStatementToCloud(enrichedData, currentUser.id).catch(() => {});
     }
 
     return new Promise((resolve, reject) => {
