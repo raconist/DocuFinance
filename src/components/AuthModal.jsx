@@ -10,9 +10,9 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   ArrowRight,
-  Briefcase
+  RefreshCw
 } from 'lucide-react';
-import { loginUser, registerUser, upgradeUserToPro } from '../utils/authService';
+import { loginUser, registerUser, upgradeUserToPro, resetUserPassword } from '../utils/authService';
 import { validatePromoCode } from '../utils/paymentConfig';
 import { TRANSLATIONS } from '../utils/i18n';
 import confetti from 'canvas-confetti';
@@ -24,15 +24,18 @@ export default function AuthModal({
   theme = 'dark',
   lang = 'tr' 
 }) {
-  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register' | 'license'
+  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register' | 'forgot' | 'license'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [accountType, setAccountType] = useState('corporate'); // 'corporate' | 'individual'
   const [companyName, setCompanyName] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
   const [licenseCode, setLicenseCode] = useState('');
   const [errorMsg, setErrorMsg] = useState(null);
+  const [isDuplicateUser, setIsDuplicateUser] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
 
   if (!isOpen) return null;
@@ -43,7 +46,7 @@ export default function AuthModal({
   const handleLogin = (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMsg(lang === 'tr' ? 'Lütfen e-posta ve şifrenizi girin.' : lang === 'de' ? 'Bitte geben Sie E-Mail und Passwort ein.' : 'Please enter your email and password.');
+      setErrorMsg(lang === 'tr' ? 'Lütfen e-posta ve şifrenizi girin.' : 'Please enter your email and password.');
       return;
     }
 
@@ -63,7 +66,7 @@ export default function AuthModal({
   const handleRegister = (e) => {
     e.preventDefault();
     if (!email || !password || !name) {
-      setErrorMsg(lang === 'tr' ? 'Lütfen tüm zorunlu alanları doldurun.' : lang === 'de' ? 'Bitte füllen Sie alle Pflichtfelder aus.' : 'Please fill in all required fields.');
+      setErrorMsg(lang === 'tr' ? 'Lütfen tüm zorunlu alanları doldurun.' : 'Please fill in all required fields.');
       return;
     }
 
@@ -78,19 +81,46 @@ export default function AuthModal({
       });
       confetti({ particleCount: 60, spread: 50 });
       setSuccessMsg(t.registerSuccessMsg);
+      setIsDuplicateUser(false);
       setTimeout(() => {
         onAuthSuccess(user);
         onClose();
       }, 1000);
     } catch (err) {
+      const isDup = err.message && err.message.includes('zaten kayıtlı');
+      setIsDuplicateUser(isDup);
       setErrorMsg(err.message || (lang === 'tr' ? 'Kayıt oluşturulurken bir hata oluştu.' : 'An error occurred during registration.'));
+    }
+  };
+
+  const handleResetPassword = (e) => {
+    e.preventDefault();
+    if (!email || !newPassword) {
+      setErrorMsg(lang === 'tr' ? 'Lütfen e-posta adresinizi ve yeni şifrenizi girin.' : 'Please enter your email and new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg(lang === 'tr' ? 'Girdiğiniz yeni şifreler birbiriyle uyuşmuyor.' : 'New passwords do not match.');
+      return;
+    }
+
+    try {
+      const user = resetUserPassword({ email, newPassword });
+      confetti({ particleCount: 50, spread: 40 });
+      setSuccessMsg(lang === 'tr' ? 'Şifreniz başarıyla sıfırlandı ve oturum açıldı!' : 'Password reset successfully!');
+      setTimeout(() => {
+        onAuthSuccess(user);
+        onClose();
+      }, 1000);
+    } catch (err) {
+      setErrorMsg(err.message || (lang === 'tr' ? 'Şifre sıfırlanırken bir hata oluştu.' : 'Error resetting password.'));
     }
   };
 
   const handleActivateLicense = (e) => {
     e.preventDefault();
     if (!licenseCode.trim()) {
-      setErrorMsg(lang === 'tr' ? 'Lütfen lisans anahtarınızı veya kupon kodunuzu girin.' : lang === 'de' ? 'Bitte geben Sie Ihren Lizenzschlüssel ein.' : 'Please enter your license key or promo code.');
+      setErrorMsg(lang === 'tr' ? 'Lütfen lisans anahtarınızı veya kupon kodunuzu girin.' : 'Please enter your license key or promo code.');
       return;
     }
 
@@ -118,34 +148,6 @@ export default function AuthModal({
     }
   };
 
-  // 1-Click Demo Quick Login localized to active language
-  const handleQuickDemoLogin = (type = 'corporate') => {
-    const demoEmail = type === 'corporate' 
-      ? (lang === 'tr' ? 'muhasebe@erdem-musavirlik.com' : lang === 'de' ? 'kontakt@weber-steuerberater.de' : 'cpa@reynolds-advisory.com')
-      : (lang === 'tr' ? 'ahmet.yilmaz@bireysel.com' : lang === 'de' ? 'm.schmidt@privat.de' : 'david.miller@personal.com');
-
-    const demoName = type === 'corporate' ? t.demoUserCorporateName : t.demoUserIndividualName;
-    const demoCompany = type === 'corporate' ? t.demoUserCompanyName : '';
-    const demoTax = type === 'corporate' ? (lang === 'tr' ? '4892019482' : lang === 'de' ? 'DE318492019' : 'US-89201948') : '';
-
-    const user = registerUser({
-      email: demoEmail,
-      password: 'demopassword123',
-      name: demoName,
-      accountType: type,
-      companyName: demoCompany,
-      taxNumber: demoTax
-    });
-
-    const upgraded = upgradeUserToPro(user.id, 'pro_annual', `DOCUPRO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-    confetti({ particleCount: 60, spread: 50 });
-    setSuccessMsg(`${t.loginSuccessMsg} ${demoName}`);
-    setTimeout(() => {
-      onAuthSuccess(upgraded);
-      onClose();
-    }, 800);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
       <div className={`relative w-full max-w-lg rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${
@@ -162,10 +164,10 @@ export default function AuthModal({
             </div>
             <div>
               <h2 className={`text-xl font-extrabold font-display ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                {activeTab === 'login' ? t.authModalLoginTitle : activeTab === 'register' ? t.authModalRegisterTitle : t.authModalLicenseTitle}
+                {activeTab === 'login' ? t.authModalLoginTitle : activeTab === 'register' ? t.authModalRegisterTitle : activeTab === 'forgot' ? 'Şifremi Sıfırla' : t.authModalLicenseTitle}
               </h2>
               <p className="text-xs text-slate-400">
-                {t.authModalSubtitle}
+                {activeTab === 'forgot' ? 'Kayıtlı e-posta adresiniz için yeni şifre belirleyin' : t.authModalSubtitle}
               </p>
             </div>
           </div>
@@ -183,7 +185,7 @@ export default function AuthModal({
           isDark ? 'bg-[#090e1a] border-white/5' : 'bg-slate-100/70 border-slate-200'
         }`}>
           <button
-            onClick={() => { setActiveTab('login'); setErrorMsg(null); setSuccessMsg(null); }}
+            onClick={() => { setActiveTab('login'); setErrorMsg(null); setSuccessMsg(null); setIsDuplicateUser(false); }}
             className={`flex-1 py-3 text-center transition-all border-b-2 ${
               activeTab === 'login' 
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' 
@@ -194,7 +196,7 @@ export default function AuthModal({
           </button>
 
           <button
-            onClick={() => { setActiveTab('register'); setErrorMsg(null); setSuccessMsg(null); }}
+            onClick={() => { setActiveTab('register'); setErrorMsg(null); setSuccessMsg(null); setIsDuplicateUser(false); }}
             className={`flex-1 py-3 text-center transition-all border-b-2 ${
               activeTab === 'register' 
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' 
@@ -205,7 +207,19 @@ export default function AuthModal({
           </button>
 
           <button
-            onClick={() => { setActiveTab('license'); setErrorMsg(null); setSuccessMsg(null); }}
+            onClick={() => { setActiveTab('forgot'); setErrorMsg(null); setSuccessMsg(null); setIsDuplicateUser(false); }}
+            className={`flex-1 py-3 text-center transition-all border-b-2 flex items-center justify-center gap-1 ${
+              activeTab === 'forgot' 
+                ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Şifre Sıfırla</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('license'); setErrorMsg(null); setSuccessMsg(null); setIsDuplicateUser(false); }}
             className={`flex-1 py-3 text-center transition-all border-b-2 flex items-center justify-center gap-1 ${
               activeTab === 'license' 
                 ? 'border-amber-500 text-amber-400 bg-amber-500/10' 
@@ -223,7 +237,26 @@ export default function AuthModal({
           {/* Notification Alerts */}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-medium animate-fadeIn">
-              {errorMsg}
+              <div>{errorMsg}</div>
+              {isDuplicateUser && (
+                <div className="mt-2 pt-2 border-t border-rose-500/30 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('forgot'); setErrorMsg(null); setIsDuplicateUser(false); }}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-[11px] flex items-center gap-1 transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Şifrenizi mi unuttunuz? Sıfırlayın</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('login'); setErrorMsg(null); setIsDuplicateUser(false); }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] transition-colors"
+                  >
+                    Giriş Yap
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -255,10 +288,19 @@ export default function AuthModal({
               </div>
 
               <div>
-                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
-                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{t.passwordLabel}</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{t.passwordLabel}</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('forgot'); setErrorMsg(null); }}
+                    className="text-[11px] font-semibold text-emerald-400 hover:underline"
+                  >
+                    Şifremi Unuttum?
+                  </button>
+                </div>
                 <input
                   type="password"
                   value={password}
@@ -285,7 +327,6 @@ export default function AuthModal({
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               
-              {/* Account Type Selector */}
               <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-950/40 border border-white/5 text-xs font-bold">
                 <button
                   type="button"
@@ -323,42 +364,13 @@ export default function AuthModal({
                 />
               </div>
 
-              {accountType === 'corporate' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.companyLabel}</label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder={t.demoUserCompanyName}
-                      className={`w-full px-3 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                        isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.taxNumberLabel}</label>
-                    <input
-                      type="text"
-                      value={taxNumber}
-                      onChange={(e) => setTaxNumber(e.target.value)}
-                      placeholder={lang === 'tr' ? '4892019482' : 'DE318492019'}
-                      className={`w-full px-3 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
-                        isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-              )}
-
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.emailLabel}</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="iletisim@sirketiniz.com"
+                  placeholder="muhasebe@sirket.com"
                   required
                   className={`w-full px-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
                     isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
@@ -380,6 +392,35 @@ export default function AuthModal({
                 />
               </div>
 
+              {accountType === 'corporate' && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">{t.companyNameLabel}</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder={t.demoUserCompanyName}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
+                        isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">{t.taxNumberLabel}</label>
+                    <input
+                      type="text"
+                      value={taxNumber}
+                      onChange={(e) => setTaxNumber(e.target.value)}
+                      placeholder="10 Haneli VKN"
+                      className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none focus:border-emerald-500 ${
+                        isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
@@ -390,73 +431,127 @@ export default function AuthModal({
             </form>
           )}
 
-          {/* TAB 3: LICENSE KEY ACTIVATION */}
-          {activeTab === 'license' && (
-            <form onSubmit={handleActivateLicense} className="space-y-4">
-              <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/30 text-amber-300 text-xs">
-                <span className="font-extrabold block mb-1">🎁 {t.licenseNoticeTitle}</span>
-                <span className="text-[11px] text-amber-200/80 leading-relaxed">
-                  {t.licenseNoticeDesc}
-                </span>
+          {/* TAB 3: FORGOT / RESET PASSWORD */}
+          {activeTab === 'forgot' && (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs">
+                Kayıtlı e-posta adresinizi ve hesabınız için belirlemek istediğiniz yeni şifrenizi girin.
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.licenseKeyLabel}</label>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Mail className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Kayıtlı E-Posta Adresi</span>
+                </label>
                 <input
-                  type="text"
-                  value={licenseCode}
-                  onChange={(e) => setLicenseCode(e.target.value)}
-                  placeholder="DOCUPRO-XXXXXX veya MUHASEBE100"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@sirket.com"
                   required
-                  className={`w-full px-4 py-2.5 rounded-xl border text-xs font-mono font-bold focus:outline-none focus:border-amber-500 ${
-                    isDark ? 'bg-slate-950 border-white/10 text-amber-300 placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-amber-700'
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-cyan-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Yeni Şifre</span>
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="En az 4 karakter"
+                  required
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-cyan-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-1.5">
+                  <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Yeni Şifre (Tekrar)</span>
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Şifreyi tekrar yazın"
+                  required
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-cyan-500 font-medium ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
                   }`}
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>{t.activateProBtn}</span>
+                <RefreshCw className="w-4 h-4" />
+                <span>Şifreyi Güncelle ve Giriş Yap</span>
               </button>
             </form>
           )}
 
-          {/* Demo Quick Login Shortcut */}
-          <div className="mt-6 pt-5 border-t border-white/10 text-center">
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('corporate')}
-              className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold transition-all hover:scale-[1.01] flex items-center justify-center gap-2 ${
-                isDark 
-                  ? 'bg-slate-800/80 hover:bg-slate-800 text-emerald-400 border-emerald-500/30' 
-                  : 'bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border-emerald-200'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>{t.demoCorporateBtn}</span>
-            </button>
+          {/* TAB 4: LICENSE CODE / PROMO */}
+          {activeTab === 'license' && (
+            <form onSubmit={handleActivateLicense} className="space-y-4">
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                {t.licenseDescription}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.emailOptionalLabel}</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="hesap@sirket.com"
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.promoCodeInputLabel}</label>
+                <input
+                  type="text"
+                  value={licenseCode}
+                  onChange={(e) => setLicenseCode(e.target.value.toUpperCase())}
+                  placeholder="DOCUPRO-2026-XXXX"
+                  required
+                  className={`w-full px-4 py-3 rounded-xl border text-xs focus:outline-none focus:border-amber-500 font-mono uppercase tracking-wider ${
+                    isDark ? 'bg-slate-950 border-white/10 text-white placeholder:text-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{t.activateLicenseBtn}</span>
+              </button>
+            </form>
+          )}
+
+          {/* Privacy & Zero Knowledge Guarantee Footer */}
+          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500">
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Sıfır-Bilgi Gizlilik Güvencesi</span>
+            </div>
+            <span>KVKK & GDPR Uyumlu</span>
           </div>
 
-        </div>
-
-        {/* Footer */}
-        <div className={`p-4 border-t flex items-center justify-between text-xs text-slate-400 ${
-          isDark ? 'bg-slate-950/80 border-white/10' : 'bg-slate-100 border-slate-200'
-        }`}>
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Zero-Knowledge AES-256</span>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="hover:text-white transition-colors"
-          >
-            {t.closeBtn}
-          </button>
         </div>
 
       </div>

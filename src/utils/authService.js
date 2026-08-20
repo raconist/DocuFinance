@@ -147,6 +147,29 @@ export function loginUser({ email, password }) {
 }
 
 /**
+ * Reset password for an existing account
+ */
+export function resetUserPassword({ email, newPassword }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  const userIndex = existingUsers.findIndex(u => u.email === cleanEmail);
+  if (userIndex === -1) {
+    throw new Error('Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.');
+  }
+
+  if (!newPassword || newPassword.trim().length < 4) {
+    throw new Error('Yeni şifreniz en az 4 karakterden oluşmalıdır.');
+  }
+
+  existingUsers[userIndex].password = newPassword.trim();
+  localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+  
+  saveUserSession(existingUsers[userIndex]);
+  return existingUsers[userIndex];
+}
+
+/**
  * Upgrade user to Pro plan (via payment webhook, license key or promo code)
  */
 export function upgradeUserToPro(userId, planType = 'pro_monthly', licenseKey = '') {
