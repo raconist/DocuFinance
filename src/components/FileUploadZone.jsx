@@ -82,19 +82,18 @@ export default function FileUploadZone({
       return { text: ocrText, isXmlInvoice: false };
     }
 
-    // 2. PDF parsing (with scanned fallback)
+    // 2. PDF parsing (with text extraction and scanned canvas OCR fallback)
     if (isPdf) {
-      try {
-        const { text } = await extractTextFromPdf(file);
-        if (text && text.trim().length > 30) {
-          return { text, isXmlInvoice: false };
-        }
-      } catch (pdfErr) {
-        console.warn('PDF extraction fallback to OCR:', pdfErr);
+      const { text } = await extractTextFromPdf(file, (pageNum, totalPages) => {
+        setBatchProgress(prev => prev ? { ...prev, ocrPercent: Math.round((pageNum / totalPages) * 100) } : null);
+      });
+      if (!text || text.trim().length === 0) {
+        throw new Error('PDF belgesi okunamadı veya boş içerik tespit edildi.');
       }
+      return { text, isXmlInvoice: false };
     }
 
-    // 3. Text / XML reader
+    // 3. Text / XML reader (Only for plain text and XML files)
     const rawText = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (event) => resolve(event.target.result);
