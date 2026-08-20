@@ -6,6 +6,9 @@ Disallow: /#admin
 User-agent: Googlebot
 Allow: /
 
+User-agent: Google-Extended
+Allow: /
+
 User-agent: Bingbot
 Allow: /
 
@@ -18,7 +21,13 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
+User-agent: PerplexityBot
+Allow: /
+
 User-agent: Applebot
+Allow: /
+
+User-agent: CCBot
 Allow: /
 
 Sitemap: https://docufinance.vercel.app/sitemap.xml
