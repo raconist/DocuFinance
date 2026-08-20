@@ -1,10 +1,10 @@
-/**
- * DocuFinance AI - User Authentication & Subscription Service
- * Manages user accounts, corporate/individual profiles, subscription tiers,
- * and license validation with local persistence and Supabase synchronization.
- */
-
-import { syncUserProfileToCloud, cloudFindUserByEmail, isSupabaseConfigured } from './supabase';
+import { 
+  syncUserProfileToCloud, 
+  cloudFindUserByEmail, 
+  cloudFetchAllUsers, 
+  cloudDeleteUser, 
+  isSupabaseConfigured 
+} from './supabase';
 
 const AUTH_STORAGE_KEY = 'docufinance_auth_user_v1';
 const AUTH_USERS_DB_KEY = 'docufinance_registered_users_db_v1';
@@ -294,63 +294,105 @@ export function incrementUserStats(txCount = 1) {
   saveUserSession(updatedUser);
 }
 
-const ALL_USERS_KEY = 'docufinance_all_registered_users_v1';
-
+/**
+ * Get all real registered users from LocalDB and Supabase Cloud
+ */
 export function getAllUsers() {
-  try {
-    const raw = localStorage.getItem(ALL_USERS_KEY);
-    if (raw) {
-      const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length > 0) return list;
-    }
-  } catch (e) {}
-
+  const localUsers = getRegisteredUsers();
   const current = getCurrentUser();
-  const defaultList = [
-    {
-      id: 'usr_corp_1',
-      name: 'Mali Müşavir Can Erdem',
-      email: 'muhasebe@erdem-musavirlik.com',
-      accountType: 'corporate',
-      companyName: 'Erdem & Ortakları Mali Müşavirlik A.Ş.',
-      taxNumber: '4892019482',
-      tier: 'pro_annual',
-      licenseKey: 'DOCUPRO-CANERDEM2026',
-      createdAt: '2026-08-01T10:00:00.000Z'
-    },
-    {
-      id: 'usr_corp_2',
-      name: 'CPA John Reynolds',
-      email: 'cpa@reynolds-advisory.com',
-      accountType: 'corporate',
-      companyName: 'Reynolds & Partners Financial Advisory LLC',
-      taxNumber: 'US-89201948',
-      tier: 'pro_monthly',
-      licenseKey: 'DOCUPRO-REYNOLDS99',
-      createdAt: '2026-08-05T14:30:00.000Z'
-    },
-    {
-      id: 'usr_ind_1',
-      name: 'Ahmet Yılmaz',
-      email: 'ahmet.yilmaz@bireysel.com',
-      accountType: 'individual',
-      companyName: '',
-      taxNumber: '',
-      tier: 'free',
-      licenseKey: null,
-      createdAt: '2026-08-10T09:15:00.000Z'
-    }
-  ];
-
-  if (current && !defaultList.some(u => u.id === current.id || u.email === current.email)) {
-    defaultList.unshift(current);
+  
+  if (current && !localUsers.some(u => u.email === current.email)) {
+    localUsers.unshift(current);
   }
 
-  return defaultList;
+  return localUsers;
+}
+
+/**
+ * Async fetch of all users merged from Local Storage and Supabase Cloud
+ */
+export async function getAllUsersAsync() {
+  const localUsers = getAllUsers();
+  const cloudUsers = await cloudFetchAllUsers();
+
+  const userMap = new Map();
+  localUsers.forEach(u => userMap.set(u.email.toLowerCase(), u));
+  cloudUsers.forEach(u => {
+    if (!userMap.has(u.email.toLowerCase())) {
+      userMap.set(u.email.toLowerCase(), u);
+    } else {
+      // Merge cloud stats & tier
+      const existing = userMap.get(u.email.toLowerCase());
+      userMap.set(u.email.toLowerCase(), { ...existing, ...u });
+    }
+  });
+
+  return Array.from(userMap.values());
+}
+
+/**
+ * Admin: Update user information in local DB and Supabase Cloud
+ */
+export async function adminUpdateUser(updatedUser) {
+  if (!updatedUser?.email) return null;
+  const cleanEmail = updatedUser.email.trim().toLowerCase();
+  const existingUsers = getRegisteredUsers();
+
+  const index = existingUsers.findIndex(u => u.email === cleanEmail);
+  if (index !== -1) {
+    existingUsers[index] = {
+      ...existingUsers[index],
+      ...updatedUser,
+      email: cleanEmail
+    };
+    localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+  } else {
+    existingUsers.unshift({
+      id: updatedUser.id || 'usr_' + Date.now(),
+      ...updatedUser,
+      email: cleanEmail
+    });
+    localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(existingUsers));
+  }
+
+  // Update current session if matching
+  const current = getCurrentUser();
+  if (current && current.email === cleanEmail) {
+    saveUserSession({ ...current, ...updatedUser, email: cleanEmail });
+  }
+
+  // Sync update to Supabase Cloud
+  await syncUserProfileToCloud(updatedUser);
+
+  return updatedUser;
+}
+
+/**
+ * Admin: Delete a user permanently from Local DB and Supabase Cloud
+ */
+export async function adminDeleteUser(userEmailOrId) {
+  if (!userEmailOrId) return false;
+  const target = String(userEmailOrId).trim().toLowerCase();
+
+  // 1. Delete from localStorage registered users
+  const existingUsers = getRegisteredUsers();
+  const filteredUsers = existingUsers.filter(u => u.email !== target && u.id !== target);
+  localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(filteredUsers));
+
+  // 2. If current user is deleted, log them out
+  const current = getCurrentUser();
+  if (current && (current.email === target || current.id === target)) {
+    logoutUser();
+  }
+
+  // 3. Delete from Supabase Cloud
+  await cloudDeleteUser(target);
+
+  return true;
 }
 
 export function saveAllUsers(users) {
   try {
-    localStorage.setItem(ALL_USERS_KEY, JSON.stringify(users));
+    localStorage.setItem(AUTH_USERS_DB_KEY, JSON.stringify(users));
   } catch (e) {}
 }

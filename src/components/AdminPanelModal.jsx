@@ -23,7 +23,10 @@ import {
   Lock,
   LogOut,
   ShieldAlert,
-  KeyRound
+  KeyRound,
+  RefreshCw,
+  Edit3,
+  UserPlus
 } from 'lucide-react';
 import { 
   getPaymentSettings, 
@@ -31,7 +34,14 @@ import {
   getPromoCodes, 
   savePromoCodes 
 } from '../utils/paymentConfig';
-import { getAllUsers, upgradeUserToPro } from '../utils/authService';
+import { 
+  getAllUsers, 
+  getAllUsersAsync, 
+  adminUpdateUser, 
+  adminDeleteUser, 
+  registerUser, 
+  upgradeUserToPro 
+} from '../utils/authService';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 
@@ -49,6 +59,21 @@ export default function AdminPanelModal({
   const [promoCodes, setPromoCodes] = useState(getPromoCodes());
   const [userList, setUserList] = useState(getAllUsers());
   const [saveToast, setSaveToast] = useState(null);
+
+  // User Management State
+  const [editingUser, setEditingUser] = useState(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    accountType: 'corporate',
+    companyName: '',
+    taxNumber: '',
+    tier: 'free'
+  });
   
   // Password Change Form State
   const [currentPass, setCurrentPass] = useState('');
@@ -70,13 +95,14 @@ export default function AdminPanelModal({
     if (isOpen) {
       setPaymentSettings(getPaymentSettings());
       setPromoCodes(getPromoCodes());
-      setUserList(getAllUsers());
-      // Always require password whenever opened fresh
+      getAllUsersAsync().then(setUserList).catch(() => setUserList(getAllUsers()));
       setIsAuthenticated(false);
       setAdminPasswordInput('');
       setAuthError(false);
       setPassError(null);
       setPassSuccess(null);
+      setEditingUser(null);
+      setIsAddingUser(false);
     }
   }, [isOpen]);
 
@@ -226,12 +252,100 @@ export default function AdminPanelModal({
     setTimeout(() => setCopiedLicense(false), 2000);
   };
 
-  const handleMakeUserPro = (userId) => {
-    const upgraded = upgradeUserToPro(userId, 'pro_annual', `DOCUPRO-MANUAL-${Date.now().toString().slice(-4)}`);
-    setUserList(getAllUsers());
+  const handleMakeUserPro = async (userIdOrEmail) => {
+    upgradeUserToPro(userIdOrEmail, 'pro_annual', `DOCUPRO-MANUAL-${Date.now().toString().slice(-4)}`);
+    const users = await getAllUsersAsync();
+    setUserList(users);
     confetti({ particleCount: 50, spread: 40 });
     setSaveToast('Kullanıcı başarıyla Sınırsız Pro yapıldı!');
     setTimeout(() => setSaveToast(null), 3000);
+  };
+
+  const handleRefreshUsers = async () => {
+    setIsRefreshingUsers(true);
+    try {
+      const users = await getAllUsersAsync();
+      setUserList(users);
+      setSaveToast('Kullanıcı listesi veritabanından başarıyla yenilendi.');
+    } catch (e) {
+      setUserList(getAllUsers());
+    } finally {
+      setIsRefreshingUsers(false);
+      setTimeout(() => setSaveToast(null), 2500);
+    }
+  };
+
+  const handleSaveUserEdit = async (e) => {
+    e.preventDefault();
+    if (!editingUser?.email) return;
+
+    try {
+      await adminUpdateUser(editingUser);
+      const users = await getAllUsersAsync();
+      setUserList(users);
+      setEditingUser(null);
+      confetti({ particleCount: 40, spread: 40 });
+      setSaveToast(`'${editingUser.email}' bilgileri veritabanında güncellendi.`);
+      setTimeout(() => setSaveToast(null), 3000);
+    } catch (err) {
+      alert('Kullanıcı güncellenirken hata oluştu: ' + err.message);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    const confirmMsg = `"${user.companyName || user.name || user.email}" kullanıcısını hem yerel hem Supabase veritabanından kalıcı olarak silmek istediğinize emin misiniz?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await adminDeleteUser(user.email || user.id);
+      const users = await getAllUsersAsync();
+      setUserList(users);
+      setSaveToast(`'${user.email}' kullanıcısı veritabanından başarıyla silindi.`);
+      setTimeout(() => setSaveToast(null), 3000);
+    } catch (err) {
+      alert('Kullanıcı silinirken hata oluştu: ' + err.message);
+    }
+  };
+
+  const handleCreateNewUser = async (e) => {
+    e.preventDefault();
+    if (!newUserForm.email || !newUserForm.name) {
+      alert('Lütfen ad ve e-posta alanlarını doldurun.');
+      return;
+    }
+
+    try {
+      const created = registerUser({
+        email: newUserForm.email,
+        password: newUserForm.password || '123456',
+        name: newUserForm.name,
+        accountType: newUserForm.accountType,
+        companyName: newUserForm.companyName,
+        taxNumber: newUserForm.taxNumber
+      });
+
+      if (newUserForm.tier?.includes('pro')) {
+        upgradeUserToPro(created.id, newUserForm.tier, `DOCUPRO-ADMIN-${Date.now().toString().slice(-4)}`);
+      }
+
+      const users = await getAllUsersAsync();
+      setUserList(users);
+      setIsAddingUser(false);
+      setNewUserForm({
+        name: '',
+        email: '',
+        password: '',
+        accountType: 'corporate',
+        companyName: '',
+        taxNumber: '',
+        tier: 'free'
+      });
+      confetti({ particleCount: 50, spread: 45 });
+      setSaveToast(`'${created.email}' kullanıcısı başarıyla oluşturuldu ve veritabanına kaydedildi.`);
+      setTimeout(() => setSaveToast(null), 3000);
+    } catch (err) {
+      alert('Kullanıcı eklenirken hata: ' + err.message);
+    }
   };
 
   const handleExportAdminData = () => {
@@ -947,54 +1061,355 @@ export default function AdminPanelModal({
             </div>
           )}
 
-          {/* TAB 4: USERS */}
+          {/* TAB 4: USERS MANAGEMENT (CRUD & DB SYNC) */}
           {activeTab === 'users' && (
             <div className="space-y-4">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Kayıtlı Firmalar ve Müşteriler ({userList.length})
-              </span>
+              
+              {/* Top Controls Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Kayıtlı Firmalar ve Müşteriler ({userList.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRefreshUsers}
+                    disabled={isRefreshingUsers}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                    title="Veritabanından Yenile"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingUsers ? 'animate-spin text-emerald-400' : ''}`} />
+                  </button>
+                </div>
 
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    placeholder="Firma, e-posta veya VKN ara..."
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-medium w-full sm:w-56 focus:outline-none focus:border-emerald-500 ${
+                      isDark ? 'bg-slate-950 border-white/10 text-white' : 'bg-slate-50 border-slate-300'
+                    }`}
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => { setIsAddingUser(prev => !prev); setEditingUser(null); }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Yeni Üye Ekle</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ADD NEW USER FORM (Collapsible) */}
+              {isAddingUser && (
+                <form onSubmit={handleCreateNewUser} className={`p-4 rounded-2xl border space-y-3 animate-fadeIn ${
+                  isDark ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-emerald-50 border-emerald-300'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-extrabold text-emerald-400">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      <span>Yeni Kullanıcı & Firma Kaydı Ekle</span>
+                    </span>
+                    <button type="button" onClick={() => setIsAddingUser(false)} className="text-slate-400 hover:text-white">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Yetkili Adı Soyadı:</label>
+                      <input
+                        type="text"
+                        value={newUserForm.name}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                        placeholder="Ahmet Yılmaz"
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">E-Posta Adresi:</label>
+                      <input
+                        type="email"
+                        value={newUserForm.email}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                        placeholder="ahmet@sirket.com"
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border font-mono ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Şifre:</label>
+                      <input
+                        type="password"
+                        value={newUserForm.password}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                        placeholder="Varsayılan: 123456"
+                        className={`w-full px-3 py-2 rounded-xl border font-mono ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Şirket Unvanı (Opsiyonel):</label>
+                      <input
+                        type="text"
+                        value={newUserForm.companyName}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, companyName: e.target.value })}
+                        placeholder="Örn: Acme Danışmanlık Ltd."
+                        className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">VKN / Vergi No:</label>
+                      <input
+                        type="text"
+                        value={newUserForm.taxNumber}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, taxNumber: e.target.value })}
+                        placeholder="10 Haneli VKN"
+                        className={`w-full px-3 py-2 rounded-xl border font-mono ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Başlangıç Paketi:</label>
+                      <select
+                        value={newUserForm.tier}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, tier: e.target.value })}
+                        className={`w-full px-3 py-2 rounded-xl border font-bold ${isDark ? 'bg-slate-900 border-white/10 text-emerald-400' : 'bg-white border-slate-300'}`}
+                      >
+                        <option value="free">Ücretsiz Başlangıç (50 Satır/Ay)</option>
+                        <option value="pro_monthly">Pro Sınırsız (Aylık)</option>
+                        <option value="pro_annual">Pro Sınırsız (Yıllık Kurumsal)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingUser(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md"
+                    >
+                      Kullanıcıyı Kaydet & DB'ye Senkronize Et
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* EDIT USER FORM (Inline Modal/Drawer) */}
+              {editingUser && (
+                <form onSubmit={handleSaveUserEdit} className={`p-4 rounded-2xl border space-y-3 animate-fadeIn ${
+                  isDark ? 'bg-cyan-950/20 border-cyan-500/40' : 'bg-cyan-50 border-cyan-300'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-extrabold text-cyan-400">
+                    <span className="flex items-center gap-1.5">
+                      <Settings className="w-4 h-4" />
+                      <span>Kullanıcı Bilgilerini Düzenle: {editingUser.email}</span>
+                    </span>
+                    <button type="button" onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-white">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Yetkili Adı Soyadı:</label>
+                      <input
+                        type="text"
+                        value={editingUser.name || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">E-Posta:</label>
+                      <input
+                        type="email"
+                        value={editingUser.email || ''}
+                        readOnly
+                        className={`w-full px-3 py-2 rounded-xl border font-mono opacity-80 cursor-not-allowed ${isDark ? 'bg-slate-950 border-white/5 text-slate-300' : 'bg-slate-100 border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Şirket Unvanı:</label>
+                      <input
+                        type="text"
+                        value={editingUser.companyName || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, companyName: e.target.value })}
+                        placeholder="Firma unvanı"
+                        className={`w-full px-3 py-2 rounded-xl border ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">VKN / Vergi No:</label>
+                      <input
+                        type="text"
+                        value={editingUser.taxNumber || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, taxNumber: e.target.value })}
+                        placeholder="VKN / TCKN"
+                        className={`w-full px-3 py-2 rounded-xl border font-mono ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Abonelik Paketi:</label>
+                      <select
+                        value={editingUser.tier || 'free'}
+                        onChange={(e) => setEditingUser({ ...editingUser, tier: e.target.value })}
+                        className={`w-full px-3 py-2 rounded-xl border font-bold ${isDark ? 'bg-slate-900 border-white/10 text-cyan-400' : 'bg-white border-slate-300'}`}
+                      >
+                        <option value="free">Ücretsiz Plan</option>
+                        <option value="pro_monthly">Pro Sınırsız (Aylık)</option>
+                        <option value="pro_annual">Pro Sınırsız (Yıllık Kurumsal)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Yeni Şifre Belirle (Opsiyonel):</label>
+                      <input
+                        type="password"
+                        placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                        onChange={(e) => {
+                          if (e.target.value.trim()) {
+                            setEditingUser({ ...editingUser, password: e.target.value.trim() });
+                          }
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl border font-mono ${isDark ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-300'}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUser(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                    >
+                      Vazgeç
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md flex items-center gap-1.5"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Değişiklikleri Kaydet & DB'ye Yaz</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Users Table */}
               <div className="border border-white/5 rounded-2xl overflow-hidden max-h-[380px] overflow-y-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 text-slate-400 font-bold border-b border-white/10">
+                  <thead className="bg-slate-950 text-slate-400 font-bold border-b border-white/10 sticky top-0 z-10">
                     <tr>
-                      <th className="p-3">Kullanıcı / Firma</th>
+                      <th className="p-3">Kullanıcı / Yetkili</th>
+                      <th className="p-3">Şirket / VKN</th>
                       <th className="p-3">E-Posta</th>
-                      <th className="p-3">VKN / Vergi No</th>
                       <th className="p-3">Paket</th>
-                      <th className="p-3 text-right">Yönetim</th>
+                      <th className="p-3 text-right">İşlemler</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {userList.map(u => (
-                      <tr key={u.id} className="hover:bg-white/5 transition-colors">
-                        <td className="p-3">
-                          <div className="font-bold text-white">{u.companyName || u.name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">{u.name}</div>
-                        </td>
-                        <td className="p-3 font-mono text-slate-300">{u.email}</td>
-                        <td className="p-3 font-mono text-slate-400">{u.taxNumber || '-'}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                            u.tier?.includes('pro') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {u.tier?.includes('pro') ? 'PRO SINIRSIZ' : 'ÜCRETSİZ'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          {!u.tier?.includes('pro') ? (
-                            <button
-                              onClick={() => handleMakeUserPro(u.id)}
-                              className="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-[11px] shadow-sm transition-all"
-                            >
-                              Pro Yap
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 font-mono">Aktif Lisans</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {userList
+                      .filter(u => {
+                        if (!userSearchTerm.trim()) return true;
+                        const term = userSearchTerm.toLowerCase();
+                        return (
+                          (u.name && u.name.toLowerCase().includes(term)) ||
+                          (u.email && u.email.toLowerCase().includes(term)) ||
+                          (u.companyName && u.companyName.toLowerCase().includes(term)) ||
+                          (u.taxNumber && u.taxNumber.includes(term))
+                        );
+                      })
+                      .map(u => (
+                        <tr key={u.id || u.email} className="hover:bg-white/5 transition-colors">
+                          <td className="p-3">
+                            <div className="font-bold text-white">{u.name || u.email.split('@')[0]}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {u.accountType === 'corporate' ? 'Kurumsal Hesap' : 'Bireysel Hesap'}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-medium text-slate-200">{u.companyName || '-'}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">{u.taxNumber ? `VKN: ${u.taxNumber}` : '-'}</div>
+                          </td>
+                          <td className="p-3 font-mono text-slate-300">{u.email}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              u.tier?.includes('pro') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {u.tier === 'pro_annual' ? 'PRO YILLIK' : u.tier === 'pro_monthly' ? 'PRO AYLIK' : 'ÜCRETSİZ'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Edit Button */}
+                              <button
+                                type="button"
+                                onClick={() => { setEditingUser(u); setIsAddingUser(false); }}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 transition-colors"
+                                title="Kullanıcıyı Düzenle"
+                              >
+                                <Settings className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Pro Toggle */}
+                              {!u.tier?.includes('pro') ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMakeUserPro(u.id || u.email)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-[10px] shadow-sm transition-all"
+                                  title="Pro Sınırsız Yap"
+                                >
+                                  Pro Yap
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    adminUpdateUser({ ...u, tier: 'free' }).then(() => {
+                                      getAllUsersAsync().then(setUserList);
+                                      setSaveToast(`${u.email} ücretsiz plana çekildi.`);
+                                    });
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-[10px] transition-colors"
+                                  title="Ücretsiz Plana İndir"
+                                >
+                                  Free Yap
+                                </button>
+                              )}
+
+                              {/* Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUser(u)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                                title="Kullanıcıyı Kalıcı Olarak Sil"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

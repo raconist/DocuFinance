@@ -148,3 +148,65 @@ export async function fetchStatementsFromCloud(userId) {
     return [];
   }
 }
+
+/**
+ * Fetch all registered users from Supabase Cloud profiles table
+ */
+export async function cloudFetchAllUsers() {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?order=created_at.desc`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map(p => ({
+      id: p.id,
+      email: p.email,
+      name: p.name,
+      accountType: p.account_type,
+      companyName: p.company_name,
+      taxNumber: p.tax_number,
+      tier: p.tier || 'free',
+      subscription: {
+        plan: p.tier || 'free',
+        status: 'active',
+        licenseKey: p.license_key || ''
+      },
+      stats: {
+        totalParsedStatements: p.statements_parsed_count || 0,
+        totalTransactionsProcessed: p.rows_processed_count || 0,
+        hoursSaved: p.hours_saved || 0
+      },
+      createdAt: p.created_at
+    }));
+  } catch (e) {
+    console.warn('Supabase fetch all users error:', e);
+    return [];
+  }
+}
+
+/**
+ * Delete a user profile from Supabase Cloud
+ */
+export async function cloudDeleteUser(email) {
+  if (!isSupabaseConfigured || !email) return { success: false };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email.toLowerCase())}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return { success: res.ok };
+  } catch (e) {
+    console.warn('Supabase delete user error:', e);
+    return { success: false };
+  }
+}
