@@ -18,6 +18,7 @@ import { saveStatementToLocalDB } from './utils/dbStorage';
 import { getCurrentUser, incrementUserStats } from './utils/authService';
 import { isRewardedBonusActive } from './utils/rewardedAdService';
 import { TRANSLATIONS } from './utils/i18n';
+import { updatePageSeo } from './utils/seoHelper';
 import { ShieldCheck, Heart, FileSpreadsheet, Lock, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -32,7 +33,32 @@ export default function App() {
   const [isRewardedAdOpen, setIsRewardedAdOpen] = useState(false);
   const [bonusKey, setBonusKey] = useState(0); // for reactivity
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
-  const [currentView, setCurrentView] = useState('app');
+  const [currentView, setCurrentView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      const params = new URLSearchParams(window.location.search);
+      if (path.includes('/convert/') || hash.includes('convert/') || hash.includes('banks') || params.has('convert') || params.has('bank')) {
+        return 'seo';
+      }
+    }
+    return 'app';
+  });
+  const [activeSeoSlug, setActiveSeoSlug] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      const params = new URLSearchParams(window.location.search);
+      if (path.includes('/convert/')) {
+        return path.split('/convert/')[1]?.replace(/\/$/, '') || null;
+      }
+      if (hash.includes('convert/')) {
+        return hash.split('convert/')[1]?.replace(/\/$/, '') || null;
+      }
+      return params.get('convert') || params.get('bank') || null;
+    }
+    return null;
+  });
   const [isProUser, setIsProUser] = useState(() => Boolean(getCurrentUser()?.tier?.includes('pro') || isRewardedBonusActive()));
   const [errorMessage, setErrorMessage] = useState(null);
   const [lang, setLang] = useState('tr');
@@ -40,6 +66,35 @@ export default function App() {
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
+
+  // Listen to URL routing (back/forward navigation & direct links)
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      const params = new URLSearchParams(window.location.search);
+      
+      if (path.includes('/convert/')) {
+        const slug = path.split('/convert/')[1]?.replace(/\/$/, '');
+        setActiveSeoSlug(slug);
+        setCurrentView('seo');
+      } else if (hash.includes('convert/')) {
+        const slug = hash.split('convert/')[1]?.replace(/\/$/, '');
+        setActiveSeoSlug(slug);
+        setCurrentView('seo');
+      } else if (hash.includes('banks') || params.has('convert') || params.has('bank')) {
+        setActiveSeoSlug(params.get('convert') || params.get('bank') || null);
+        setCurrentView('seo');
+      }
+    };
+
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
 
   // Toggle Theme & sync HTML class
   useEffect(() => {
@@ -55,11 +110,8 @@ export default function App() {
   // Secret Admin Access via Collision-Free Shortcuts: Ctrl + Shift + M OR Alt + Shift + A
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // 1. Ctrl + Shift + M (or Cmd + Shift + M) -> (M = Master / Manager)
       const isCtrlShiftM = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'M' || e.key === 'm');
-      // 2. Alt + Shift + A -> (A = Admin)
       const isAltShiftA = e.altKey && e.shiftKey && (e.key === 'A' || e.key === 'a');
-      // 3. Ctrl + Alt + A
       const isCtrlAltA = (e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'A' || e.key === 'a');
 
       if (isCtrlShiftM || isAltShiftA || isCtrlAltA) {
@@ -77,11 +129,21 @@ export default function App() {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Return to clean home screen
+  // Return to clean home screen & reset SEO tags to default
   const handleGoHome = () => {
     setParsedData(null);
     setCurrentView('app');
+    setActiveSeoSlug(null);
     setErrorMessage(null);
+    if (window.history?.pushState) {
+      window.history.pushState(null, '', '/');
+    }
+    updatePageSeo({
+      title: 'DocuFinance AI | PDF Banka Ekstresi & Faturadan Excel/CSV Çevirici (Zero-Knowledge)',
+      description: 'Tüm Türk ve Dünya bankalarının PDF ekstrelerini saniyeler içinde formüllü Excel (.xlsx), CSV ve muhasebe formatlarına (Luca, Zirve, Logo, QuickBooks) dönüştürün.',
+      keywords: 'banka ekstresi excel çevirme, garanti ekstre excel, iş bankası hesap özeti aktarma, akbank ekstre excel, ziraat dekont excel, luca ekstre aktarma, zirve ekstre aktarımı',
+      canonicalUrl: 'https://docufinance.vercel.app/'
+    });
   };
 
   const handleAuthSuccess = (user) => {
@@ -179,6 +241,7 @@ export default function App() {
         {currentView === 'seo' ? (
           <div className="w-full flex justify-center">
             <ProgrammaticSeoDirectory
+              activeSlug={activeSeoSlug}
               onTestSample={(sampleKey) => handleSelectSample(sampleKey)}
               onSelectBank={(bank) => {
                 if (bank.sampleKey) handleSelectSample(bank.sampleKey);

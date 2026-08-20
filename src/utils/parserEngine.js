@@ -341,14 +341,14 @@ Devreden Bakiye: 45.250,00 TL
 
 Tarih        Açıklama                              Borç         Alacak       Bakiye
 01.08.2026   GELEN EFT - ACME YAZILIM A.Ş.                      35.000,00   80.250,00
-02.08.2026   SHELL AKARYAKIT OTOMOTİV A.Ş.          1.450,00                78.800,00
+02.08.2026   SHELL AKARYAKIT VE OTOMOTİV A.Ş.       1.450,00                78.800,00
 04.08.2026   OFİS KİRASI - PLAZA YÖNETİMİ          12.000,00                66.800,00
-06.08.2026   YEMEKSEPETİ GIDA VE RESTORAN HARC.       340,00                66.460,00
+06.08.2026   YEMEKSEPETİ GIDA VE RESTORAN HARCAMASI   340,00                66.460,00
 08.08.2026   GELEN FAST - FREELANCE DANIŞMANLIK                 8.500,00    74.960,00
-10.08.2026   AWS AMAZON BULUT SUNUCU GİDERLERİ      2.850,00                72.110,00
+10.08.2026   AMAZON WEB SERVICES BULUT SUNUCU GİDERİ  2.850,00              72.110,00
 12.08.2026   GİB VERGİ VE SGK PRİM ÖDEMESİ          8.200,00                63.910,00
 14.08.2026   MİGROS TİCARET OFİS MUTFAK ALIŞVERİŞİ    620,00                63.290,00
-15.08.2026   PERSONEL MAAŞ VE AVANS ÖDEMELERİ      28.500,00                34.790,00
+15.08.2026   PERSONEL MAAŞ VE AVANS ÖDEMESİ        28.500,00                34.790,00
 
 Kapanış Bakiyesi: 34.790,00 TL`
   },
@@ -362,13 +362,13 @@ Kapanış Bakiyesi: 34.790,00 TL`
 Başlangıç Bakiyesi: 120.000,00 TL
 
 Tarih       İşlem Tanımı                                Borç         Alacak       Bakiye
-03.08.2026  GELEN EFT - STRATEJİK PAZARLAMA DANIŞMANLIK               50.000,00   170.000,00
-05.08.2026  PERSONEL AGİ VE PRİM ÖDEMESİ               15.200,00                 154.800,00
-07.08.2026  AWS AMAZON WEB SERVICES SUNUCU FATURASI      4.800,00                 150.000,00
-09.08.2026  YURT DIŞI SAAS ABONELİK GELİRLERİ (STRIPE)                62.500,00   212.500,00
-11.08.2026  AVUKATLIK VE HUKUKİ DANIŞMANLIK BEDELİ      7.500,00                 205.000,00
-13.08.2026  SGK VE BAĞKUR AĞUSTOS PRİM TAHSİLATI       22.400,00                 182.600,00
-15.08.2026  GELEN FAST ÖDEME - YAZILIM LİSANS SATIŞI                  14.400,00   197.000,00
+03.08.2026  GELEN EFT - STRATEJİK PAZARLAMA DANIŞMANLIĞI              50.000,00   170.000,00
+05.08.2026  PERSONEL PRİM VE YOL ÜCRETİ ÖDEMESİ        15.200,00                 154.800,00
+07.08.2026  AMAZON WEB SERVICES SUNUCU FATURASI         4.800,00                 150.000,00
+09.08.2026  YURT DIŞI SAAS YAZILIM GELİRLERİ (STRIPE)                 62.500,00   212.500,00
+11.08.2026  HUKUK VE AVUKATLIK DANIŞMANLIK BEDELİ       7.500,00                 205.000,00
+13.08.2026  SGK VE BAĞ-KUR AĞUSTOS DÖNEMİ PRİM ÖDEMESİ 22.400,00                 182.600,00
+15.08.2026  GELEN FAST - YAZILIM LİSANS SATIŞ BEDELİ                  14.400,00   197.000,00
 
 Kapanış Bakiyesi: 197.000,00 TL`
   },
@@ -383,11 +383,11 @@ Hesap No: 489-0194820 | Para Birimi: TRY
 Açılış Bakiyesi: 85.000,00 TL
 
 Tarih       Açıklama                                    Borç         Alacak       Bakiye
-02.08.2026  GELEN HAVALE - DİJİTAL REKLAM HİZMETLERİ                  45.000,00   130.000,00
+02.08.2026  GELEN HAVALE - DİJİTAL REKLAM HİZMET BEDELİ               45.000,00   130.000,00
 04.08.2026  OPET AKARYAKIT İSTASYONLARI A.Ş.            2.150,00                 127.850,00
 08.08.2026  GOOGLE CLOUD EMEA FATURA ÖDEMESİ            3.600,00                 124.250,00
-12.08.2026  YAZILIM DANIŞMANLIK HAKEDİŞ TAHSİLATI                     28.000,00   152.250,00
-15.08.2026  PERSONEL MAAŞ VE YOL ÜCRETİ ÖDEMELERİ      32.000,00                 120.250,00
+12.08.2026  YAZILIM DANIŞMANLIK HAKEDİŞ BEDELİ                        28.000,00   152.250,00
+15.08.2026  PERSONEL MAAŞ VE YOL ÜCRETİ ÖDEMESİ        32.000,00                 120.250,00
 
 Kapanış Bakiyesi: 120.250,00 TL`
   },
@@ -401,10 +401,10 @@ Kapanış Bakiyesi: 120.250,00 TL`
 Devreden Bakiye: 54.000,00 TL
 
 Tarih        Açıklama                                 Borç         Alacak       Bakiye
-01.08.2026   GELEN FAST - ETİCARET PAZARYERİ GELİRİ                38.500,00    92.500,00
+01.08.2026   GELEN FAST - E-TİCARET PAZARYERİ GELİRİ               38.500,00    92.500,00
 05.08.2026   TÜRK TELEKOM KURUMSAL FİBER İNTERNET       1.250,00                91.250,00
-09.08.2026   OFİS KİRASI VE STOPAJ BEDELİ              15.000,00                76.250,00
-14.08.2026   KURUMSAL LİSANS SATIŞ GELİRİ                          22.000,00    98.250,00
+09.08.2026   AĞUSTOS AYI OFİS KİRASI VE STOPAJ BEDELİ  15.000,00                76.250,00
+14.08.2026   KURUMSAL YAZILIM LİSANS SATIŞ GELİRİ                  22.000,00    98.250,00
 
 Güncel Bakiye: 98.250,00 TL`
   },
@@ -418,10 +418,10 @@ Güncel Bakiye: 98.250,00 TL`
 Başlangıç Bakiyesi: 60.000,00 TL
 
 Tarih       İşlem Açıklaması                            Borç         Alacak       Bakiye
-03.08.2026  GELEN EFT - KAMU VE BELEDİYE HAKEDİŞİ                     55.000,00   115.000,00
-07.08.2026  VERGİ DAİRESİ KDV VE MUHTASAR ÖDEMESİ      18.400,00                  96.600,00
-11.08.2026  NOTER VE RESMİ HARÇ GİDERLERİ               1.800,00                  94.800,00
-15.08.2026  GELEN HAVALE - DANIŞMANLIK BEDELİ                         30.000,00   124.800,00
+03.08.2026  GELEN EFT - KAMU PROJE HAKEDİŞ BEDELİ                     55.000,00   115.000,00
+07.08.2026  GİB VERGİ DAİRESİ KDV VE MUHTASAR ÖDEMESİ  18.400,00                  96.600,00
+11.08.2026  NOTER ONAY VE RESMİ HARÇ GİDERLERİ          1.800,00                  94.800,00
+15.08.2026  GELEN HAVALE - DANIŞMANLIK HİZMET BEDELİ                  30.000,00   124.800,00
 
 Kapanış Bakiyesi: 124.800,00 TL`
   },
@@ -436,9 +436,9 @@ Başlangıç Bakiyesi: 32.400,00 TL
 
 Tarih       Açıklama                                    Borç         Alacak       Bakiye
 02.08.2026  GELEN FAST - YAZILIM ENTEGRASYON BEDELİ                   16.500,00    48.900,00
-06.08.2026  FİGMA / GITHUB KURUMSAL ABONELİK GİDERİ     1.100,00                  47.800,00
-10.08.2026  YEMEK VE AĞIRLAMA GİDERİ                     680,00                  47.120,00
-14.08.2026  MÜŞAVİRLİK HİZMET BEDELİ TAHSİLATI                        12.000,00    59.120,00
+06.08.2026  GITHUB VE FIGMA KURUMSAL YAZILIM GİDERİ     1.100,00                  47.800,00
+10.08.2026  MÜŞTERİ YEMEK VE AĞIRLAMA GİDERİ             680,00                  47.120,00
+14.08.2026  MALİ MÜŞAVİRLİK HİZMET BEDELİ TAHSİLATI                   12.000,00    59.120,00
 
 Kapanış Bakiyesi: 59.120,00 TL`
   },
@@ -452,8 +452,8 @@ Kapanış Bakiyesi: 59.120,00 TL`
 Devreden Bakiye: 40.000,00 TL
 
 Tarih       Açıklama                                    Borç         Alacak       Bakiye
-04.08.2026  GELEN EFT - İHRACAT DANIŞMANLIĞI                          42.000,00    82.000,00
-08.08.2026  OFİS ELEKTRİK VE DOĞALGAZ FATURASI          2.400,00                  79.600,00
+04.08.2026  GELEN EFT - İHRACAT DANIŞMANLIK GELİRİ                    42.000,00    82.000,00
+08.08.2026  OFİS ELEKTRİK VE DOĞALGAZ FATURA ÖDEMESİ    2.400,00                  79.600,00
 12.08.2026  YURT DIŞI ÖDEME ALTYAPISI TAHSİLATI                       25.000,00   104.600,00
 
 Kapanış Bakiyesi: 104.600,00 TL`
@@ -468,9 +468,9 @@ Kapanış Bakiyesi: 104.600,00 TL`
 Başlangıç Bakiyesi: 50.000,00 TL
 
 Tarih       İşlem Açıklaması                            Borç         Alacak       Bakiye
-02.08.2026  GELEN EFT - PROJE GELİŞTİRME BEDELİ                       35.000,00    85.000,00
-06.08.2026  SGK VE PRİM ÖDEMESİ                        14.500,00                  70.500,00
-10.08.2026  DANIŞMANLIK HİZMETİ TAHSİLATI                             18.000,00    88.500,00
+02.08.2026  GELEN EFT - YAZILIM GELİŞTİRME BEDELİ                     35.000,00    85.000,00
+06.08.2026  SGK VE İŞVEREN PRİM ÖDEMESİ                14.500,00                  70.500,00
+10.08.2026  DANIŞMANLIK HİZMETİ HAKEDİŞ TAHSİLATI                     18.000,00    88.500,00
 
 Kapanış Bakiyesi: 88.500,00 TL`
   },
@@ -484,9 +484,9 @@ Kapanış Bakiyesi: 88.500,00 TL`
 Devreden Bakiye: 38.000,00 TL
 
 Tarih       Açıklama                                    Borç         Alacak       Bakiye
-03.08.2026  GELEN HAVALE - REKLAM PROJE BEDELİ                        26.000,00    64.000,00
-07.08.2026  AKARYAKIT VE NAKLİYE GİDERLERİ              1.950,00                  62.050,00
-11.08.2026  YAZILIM DESTEK ANLAŞMASI TAHSİLATI                        15.000,00    77.050,00
+03.08.2026  GELEN HAVALE - DİJİTAL REKLAM BEDELİ                      26.000,00    64.000,00
+07.08.2026  ŞİRKET ARACI AKARYAKIT GİDERİ               1.950,00                  62.050,00
+11.08.2026  YAZILIM BAKIM VE DESTEK TAHSİLATI                         15.000,00    77.050,00
 
 Kapanış Bakiyesi: 77.050,00 TL`
   },
@@ -500,8 +500,8 @@ Kapanış Bakiyesi: 77.050,00 TL`
 Açılış Bakiyesi: 45.000,00 TL
 
 Tarih       Açıklama                                    Borç         Alacak       Bakiye
-01.08.2026  GELEN FAST - MAL VE HİZMET SATIŞI                         30.000,00    75.000,00
-05.08.2026  KİRA VE AİDAT ÖDEMESİ                      10.000,00                  65.000,00
+01.08.2026  GELEN FAST - MAL VE HİZMET SATIŞ BEDELİ                   30.000,00    75.000,00
+05.08.2026  İŞ YERİ KİRA VE BİNA AİDAT ÖDEMESİ         10.000,00                  65.000,00
 09.08.2026  DİJİTAL AJANS HİZMET BEDELİ TAHSİLATI                     19.500,00    84.500,00
 
 Kapanış Bakiyesi: 84.500,00 TL`
@@ -512,15 +512,15 @@ Kapanış Bakiyesi: 84.500,00 TL`
     bank: 'Halkbank',
     region: 'TR',
     currency: 'TRY',
-    text: `TÜRKIYE HALK BANKASI A.Ş. HESAP ÖZETİ
+    text: `TÜRKİYE HALK BANKASI A.Ş. HESAP ÖZETİ
 Hesap Adı: TİCARİ MEVDUAT HESABI
 Açılış Bakiyesi: 72.000,00 TL
 
 Tarih       İşlem Detayı                                 Borç         Alacak       Bakiye
 02.08.2026  GELEN HAVALE - KURUMSAL DANIŞMANLIK BEDELİ                48.000,00   120.000,00
-06.08.2026  KOSGEB & DESTEK ÖDEMESİ HAKEDİŞ                           15.000,00   135.000,00
-10.08.2026  VERGİ VE SGK PRİM TAHSİLATI                16.800,00                  118.200,00
-14.08.2026  AKARYAKIT VE PERSONEL YOL GİDERİ            2.200,00                  116.000,00
+06.08.2026  KOSGEB AR-GE VE GİRİŞİMCİLİK HAKEDİŞİ                     15.000,00   135.000,00
+10.08.2026  GİB VERGİ VE SGK PRİM ÖDEMESİ              16.800,00                  118.200,00
+14.08.2026  ŞİRKET ARACI AKARYAKIT VE YOL GİDERİ        2.200,00                  116.000,00
 
 Kapanış Bakiyesi: 116.000,00 TL`
   },

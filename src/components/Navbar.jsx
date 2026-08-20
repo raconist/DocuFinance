@@ -121,14 +121,31 @@ export default function Navbar({
             <span className="hidden sm:inline">{t.securityModalTitle}</span>
           </button>
 
+          {/* Theme Toggle (Light / Dark) */}
+          <button
+            onClick={onToggleTheme}
+            className={`p-2.5 rounded-xl border transition-all ${
+              isDark 
+                ? 'bg-slate-900 border-white/10 text-amber-400 hover:bg-slate-800' 
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+            }`}
+            title={isDark ? (lang === 'tr' ? 'Açık Temaya Geç (Light Mode)' : 'Switch to Light Mode') : (lang === 'tr' ? 'Koyu Temaya Geç (Dark Mode)' : 'Switch to Dark Mode')}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
           {/* Language Switcher Dropdown */}
-          <div className="flex items-center rounded-xl p-0.5 border border-white/10 bg-slate-900/90 text-xs font-bold text-slate-400">
+          <div className={`flex items-center rounded-xl p-0.5 border text-xs font-bold ${
+            isDark ? 'border-white/10 bg-slate-900/90 text-slate-400' : 'border-slate-200 bg-slate-100 text-slate-600'
+          }`}>
             {['tr', 'en', 'de'].map((l) => (
               <button
                 key={l}
                 onClick={() => onLangChange(l)}
                 className={`px-2 py-1 rounded-lg uppercase text-[11px] font-extrabold transition-colors ${
-                  lang === l ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'hover:text-white'
+                  lang === l 
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm' 
+                    : isDark ? 'hover:text-white' : 'hover:text-slate-950'
                 }`}
               >
                 {l}
