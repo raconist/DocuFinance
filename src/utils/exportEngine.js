@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { maskSensitiveData } from './security.js';
+import { parseFinancialNumber } from './parserEngine.js';
 
 /**
  * DocuFinance AI - Universal Multi-Accounting Export Engine

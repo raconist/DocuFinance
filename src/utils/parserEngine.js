@@ -335,11 +335,15 @@ export function parseFinancialContent(rawText) {
       upperLine.includes('TAHSILAT') || 
       upperLine.includes('GELEN HAVALE') || 
       upperLine.includes('GELEN EFT') || 
+      upperLine.includes('HAVALE GELEN') || 
+      upperLine.includes('EFT GELEN') || 
       upperLine.includes('HESABA YATAN') || 
-      /\b(CR|\+)\b/.test(upperLine) || 
+      /(?:^|\s)(\+|A|CR)(?:\s|$)/.test(upperLine) || 
+      upperLine.includes(' +') || 
+      upperLine.includes('+ ') || 
+      upperLine.endsWith('+') || 
       upperLine.endsWith(' A') || 
-      upperLine.endsWith(' CR') || 
-      upperLine.endsWith(' +');
+      upperLine.endsWith(' CR');
 
     const hasBorcOrExpense = 
       upperLine.includes('BORÇ') || 
@@ -361,10 +365,14 @@ export function parseFinancialContent(rawText) {
       upperLine.includes('ÜCRET') || 
       upperLine.includes('UCRET') || 
       upperLine.includes('MASRAF') || 
-      /\b(B|DR|-)\b/.test(upperLine) || 
+      upperLine.includes('GIDEN') || 
+      /(?:^|\s)(-|-TL|B|DR)(?:\s|$)/.test(upperLine) || 
+      upperLine.includes(' -') || 
+      upperLine.includes('- ') || 
+      upperLine.endsWith('-') || 
       upperLine.endsWith(' B') || 
       upperLine.endsWith(' DR') || 
-      upperLine.endsWith(' -');
+      /MARKET|PETROL|BENZIN|SHELL|OPET|BP|TOTAL|AYGAZ|MIGROS|BIM|A101|SOK|CARREFOUR|RESTORAN|CAFE|YEMEK|STARBUCKS|TRENDYOL|HEPSIBURADA|AMAZON|N11|ZARA|LCW|BOYNER|ECZANE|HASTANE|OTEL|UBER|BITAKSI|TURKCELL|VODAFONE|TURK TELEKOM|NETFLIX|SPOTIFY|APPLE|GOOGLE|FATURA|KIRA|AIDAT|GIDER|MASRAF|POS/i.test(upperLine);
 
     if (amounts.length >= 3) {
       // 3 amounts: [Debit, Credit, Balance] or [Amount, Tax, Balance]
@@ -464,8 +472,10 @@ export function parseFinancialContent(rawText) {
       cleanDesc = cleanDesc.replace(amt, '');
     });
     cleanDesc = cleanDesc
-      .replace(/[₺$€£TLUSDGBPCHF]/gi, '')
+      .replace(/[₺$€£]/g, '')
+      .replace(/\b(TL|TRY|USD|EUR|GBP|CHF)\b/gi, '')
       .replace(/\s+[AB]\s*$/i, '')
+      .replace(/\s+[+-]\s*$/i, '')
       .replace(/\s+/g, ' ')
       .trim();
 
