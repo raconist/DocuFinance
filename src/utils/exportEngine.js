@@ -43,12 +43,12 @@ export function exportToExcel(parsedData, options = {}) {
   let totalCredit = 0;
 
   rows.forEach(r => {
-    totalDebit += (r.debit || 0);
-    totalCredit += (r.credit || 0);
+    totalDebit += parseFinancialNumber(r.debit);
+    totalCredit += parseFinancialNumber(r.credit);
   });
 
-  const startingBalance = meta.startingBalance || 0;
-  const officialEnding = meta.endingBalance || 0;
+  const startingBalance = parseFinancialNumber(meta.startingBalance) || 0;
+  const officialEnding = parseFinancialNumber(meta.endingBalance) || 0;
   const netFlow = totalCredit - totalDebit;
   const calculatedEnding = startingBalance + netFlow;
   const endingBalance = officialEnding || calculatedEnding;
@@ -95,16 +95,20 @@ export function exportToExcel(parsedData, options = {}) {
       desc = maskSensitiveData(desc);
     }
 
+    const rowDebit = parseFinancialNumber(row.debit);
+    const rowCredit = parseFinancialNumber(row.credit);
+    const rowBalance = parseFinancialNumber(row.balance);
+
     aoaData.push([
       index + 1,
       row.date || '',
       desc,
       row.category || 'Genel Giderler',
-      row.accountCode || (row.credit > 0 ? '600.01' : '770.01'),
-      row.debit > 0 ? row.debit : 0,
-      row.credit > 0 ? row.credit : 0,
-      (row.credit || 0) - (row.debit || 0),
-      row.balance || 0
+      row.accountCode || (rowCredit > 0 ? '600.01' : '770.01'),
+      rowDebit > 0 ? rowDebit : 0,
+      rowCredit > 0 ? rowCredit : 0,
+      rowCredit - rowDebit,
+      rowBalance || 0
     ]);
   });
 

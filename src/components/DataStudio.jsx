@@ -133,15 +133,17 @@ export default function DataStudio({
     const monthlyTotals = {};
 
     rows.forEach(r => {
-      totalDebit += (r.debit || 0);
-      totalCredit += (r.credit || 0);
+      const d = parseFinancialNumber(r.debit);
+      const c = parseFinancialNumber(r.credit);
+      totalDebit += d;
+      totalCredit += c;
 
       const cat = r.category || 'Genel Giderler';
       if (!categoryTotals[cat]) {
         categoryTotals[cat] = { debit: 0, credit: 0, count: 0, code: r.accountCode || '' };
       }
-      categoryTotals[cat].debit += (r.debit || 0);
-      categoryTotals[cat].credit += (r.credit || 0);
+      categoryTotals[cat].debit += d;
+      categoryTotals[cat].credit += c;
       categoryTotals[cat].count += 1;
 
       // Month grouping (MM/YYYY)
@@ -153,12 +155,12 @@ export default function DataStudio({
       if (!monthlyTotals[monthKey]) {
         monthlyTotals[monthKey] = { debit: 0, credit: 0 };
       }
-      monthlyTotals[monthKey].debit += (r.debit || 0);
-      monthlyTotals[monthKey].credit += (r.credit || 0);
+      monthlyTotals[monthKey].debit += d;
+      monthlyTotals[monthKey].credit += c;
     });
 
-    const startingBalance = data.meta?.startingBalance || 0;
-    const officialEnding = data.meta?.endingBalance || 0;
+    const startingBalance = parseFinancialNumber(data.meta?.startingBalance) || 0;
+    const officialEnding = parseFinancialNumber(data.meta?.endingBalance) || 0;
     const calculatedEnding = startingBalance + totalCredit - totalDebit;
     const discrepancy = Math.abs(calculatedEnding - officialEnding);
     const isReconciled = discrepancy < 0.05;
@@ -272,11 +274,12 @@ export default function DataStudio({
       if (r.id !== rowId) return r;
 
       const targetRow = { ...r };
+      targetRow[field] = value;
+      
       if (field === 'debit' || field === 'credit' || field === 'balance') {
-        targetRow[field] = parseFinancialNumber(value);
-        targetRow.amount = (targetRow.credit || 0) - (targetRow.debit || 0);
-      } else {
-        targetRow[field] = value;
+        const c = parseFinancialNumber(targetRow.credit);
+        const d = parseFinancialNumber(targetRow.debit);
+        targetRow.amount = c - d;
       }
       return targetRow;
     });
@@ -981,7 +984,7 @@ export default function DataStudio({
                     <td className="text-right">
                       <input
                         type="text"
-                        value={row.debit > 0 ? row.debit : ''}
+                        value={row.debit !== undefined && row.debit !== null ? (row.debit === 0 ? '' : row.debit) : ''}
                         placeholder="0.00"
                         onChange={(e) => handleCellEdit(rowId, 'debit', e.target.value)}
                         className="bg-transparent text-xs font-mono text-rose-500 text-right border-b border-transparent hover:border-slate-500 focus:border-rose-500 px-1 py-1 rounded w-full outline-none font-bold"
@@ -991,7 +994,7 @@ export default function DataStudio({
                     <td className="text-right">
                       <input
                         type="text"
-                        value={row.credit > 0 ? row.credit : ''}
+                        value={row.credit !== undefined && row.credit !== null ? (row.credit === 0 ? '' : row.credit) : ''}
                         placeholder="0.00"
                         onChange={(e) => handleCellEdit(rowId, 'credit', e.target.value)}
                         className="bg-transparent text-xs font-mono text-emerald-500 text-right border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-bold"
