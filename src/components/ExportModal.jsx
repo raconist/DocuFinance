@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { 
   exportToExcel, 
+  exportToWord,
   exportToLucaCSV, 
   exportToZirveExcel, 
   exportToLogoExcel, 
@@ -25,7 +26,7 @@ import {
   exportToQBO, 
   exportToQIF, 
   exportToCSV, 
-  exportToJSON,
+  exportToJSON, 
   exportToDatevCSV,
   exportConsolidatedAnnualLedger
 } from '../utils/exportEngine';
@@ -54,7 +55,7 @@ export default function ExportModal({
   const isDark = theme === 'dark';
 
   const EXPORT_FORMATS = [
-    // 📊 GLOBAL & EXCEL
+    // 📊 GLOBAL & EXCEL / WORD
     {
       id: 'excel',
       region: 'GLOBAL',
@@ -66,6 +67,18 @@ export default function ExportModal({
       iconColor: 'text-emerald-400',
       description: 'Formüllü, otomatik sütun genişlikli ve detaylı mutabakat özet sayfalı Excel tablosu.',
       action: () => exportToExcel(data, { fileName: `${bankName}_Rapor`, isMasked, includeAuditSheet: includeAudit, currency })
+    },
+    {
+      id: 'word',
+      region: 'GLOBAL',
+      name: 'Microsoft Word (.doc / .docx)',
+      category: 'Rapor & Belge',
+      badge: 'Yeni',
+      badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      icon: FileText,
+      iconColor: 'text-blue-400',
+      description: 'Özet KPI kartları, genel toplamlar ve biçimlendirilmiş tablolar içeren resmi Microsoft Word raporu.',
+      action: () => exportToWord(data, { fileName: `${bankName}_Word_Raporu`, isMasked, currency })
     },
     {
       id: 'consolidated',

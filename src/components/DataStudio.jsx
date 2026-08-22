@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, parseFinancialNumber } from '../utils/parserEngine';
 import { maskSensitiveData } from '../utils/security';
-import { exportToExcel } from '../utils/exportEngine';
+import { exportToExcel, exportToWord } from '../utils/exportEngine';
 import { applyRulesToTransactions } from '../utils/rulesEngine';
 import { detectDuplicates, removeDuplicateRows } from '../utils/duplicateDetector';
 import { saveStatementToLocalDB } from '../utils/dbStorage';
@@ -418,6 +418,21 @@ export default function DataStudio({
     setTimeout(() => setExportSuccessMsg(null), 4000);
   };
 
+  const handleQuickExportWord = () => {
+    try {
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
+    } catch (e) {}
+
+    exportToWord(data, {
+      fileName: `${stats.bankName}_${new Date().toISOString().slice(0, 10)}`,
+      isMasked: isMasked,
+      currency: stats.currency
+    });
+
+    setExportSuccessMsg('Microsoft Word (.doc) raporu başarıyla indirildi!');
+    setTimeout(() => setExportSuccessMsg(null), 4000);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
       
@@ -609,14 +624,29 @@ export default function DataStudio({
           {/* Quick Excel Download */}
           <button
             onClick={handleQuickExportExcel}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all hover:scale-[1.02] shadow-sm ${
               isDark 
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-white/10' 
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
             }`}
+            title="Detaylı Excel (.xlsx) İndir"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
             <span>Hızlı Excel (.xlsx)</span>
+          </button>
+
+          {/* Quick Word Download */}
+          <button
+            onClick={handleQuickExportWord}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all hover:scale-[1.02] shadow-sm ${
+              isDark 
+                ? 'bg-blue-950/40 hover:bg-blue-900/40 text-blue-300 border-blue-500/30' 
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+            }`}
+            title="Biçimlendirilmiş Resmi Word (.doc) Raporu İndir"
+          >
+            <FileText className="w-4 h-4 text-blue-400" />
+            <span>Hızlı Word (.doc)</span>
           </button>
 
           {/* Universal Export Modal Trigger */}

@@ -525,5 +525,228 @@ export function exportConsolidatedAnnualLedger(parsedData, options = {}) {
   const ws2 = XLSX.utils.json_to_sheet(Object.values(monthlySummary));
   XLSX.utils.book_append_sheet(wb, ws2, 'Aylık Gelir-Gider Mizanı');
 
-  XLSX.writeFile(wb, `${fileName}.xlsx`);
+  XLSX.writeFile(wb, (fileName.replace(/\.xlsx$/i, '') || 'Konsolide_Yillik_Mizan_2026') + '.xlsx');
+}
+
+// 12. Microsoft Word Document (.doc / .docx compatible)
+export function exportToWord(parsedData, options = {}) {
+  const { fileName = 'Banka_Ekstresi_Word_Raporu', isMasked = false, currency = 'TRY' } = options;
+
+  const rows = parsedData.rows || [];
+  const meta = parsedData.meta || {};
+
+  let totalDebit = 0;
+  let totalCredit = 0;
+  const categoryTotals = {};
+
+  rows.forEach(r => {
+    const d = parseFinancialNumber(r.debit);
+    const c = parseFinancialNumber(r.credit);
+    totalDebit += d;
+    totalCredit += c;
+
+    const cat = r.category || 'Genel Giderler';
+    if (!categoryTotals[cat]) {
+      categoryTotals[cat] = { debit: 0, credit: 0, count: 0 };
+    }
+    categoryTotals[cat].debit += d;
+    categoryTotals[cat].credit += c;
+    categoryTotals[cat].count += 1;
+  });
+
+  const startingBalance = parseFinancialNumber(meta.startingBalance) || 0;
+  const officialEnding = parseFinancialNumber(meta.endingBalance) || 0;
+  const netFlow = totalCredit - totalDebit;
+  const calculatedEnding = startingBalance + netFlow;
+  const endingBalance = officialEnding || calculatedEnding;
+  const bankName = meta.bankName || 'Banka Ekstresi';
+
+  const formatCurr = (val) => {
+    return Number(val || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset='utf-8'>
+      <title>${bankName} Finansal Raporu</title>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+        }
+        body {
+          font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+          font-size: 10pt;
+          color: #1e293b;
+          line-height: 1.4;
+        }
+        .header-title {
+          font-size: 18pt;
+          font-weight: bold;
+          color: #0f172a;
+          border-bottom: 2pt solid #10b981;
+          padding-bottom: 6pt;
+          margin-bottom: 8pt;
+        }
+        .meta-text {
+          font-size: 9pt;
+          color: #64748b;
+          margin-bottom: 15pt;
+        }
+        .kpi-container {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20pt;
+        }
+        .kpi-box {
+          border: 1pt solid #cbd5e1;
+          background-color: #f8fafc;
+          padding: 8pt;
+          text-align: center;
+          width: 20%;
+        }
+        .kpi-label {
+          font-size: 8pt;
+          font-weight: bold;
+          color: #64748b;
+          text-transform: uppercase;
+          margin-bottom: 4pt;
+        }
+        .kpi-val {
+          font-size: 13pt;
+          font-weight: bold;
+          font-family: 'Consolas', monospace;
+        }
+        .text-green { color: #059669; }
+        .text-red { color: #dc2626; }
+        .text-dark { color: #0f172a; }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10pt;
+          font-size: 8.5pt;
+        }
+        .table th {
+          background-color: #0f172a;
+          color: #ffffff;
+          padding: 6pt 5pt;
+          font-weight: bold;
+          text-align: left;
+          border: 1pt solid #0f172a;
+        }
+        .table td {
+          padding: 5pt 5pt;
+          border: 0.5pt solid #e2e8f0;
+          vertical-align: middle;
+        }
+        .table tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        .total-row td {
+          background-color: #e2e8f0 !important;
+          font-weight: bold;
+          font-size: 9.5pt;
+          border-top: 1.5pt solid #0f172a;
+        }
+        .footer {
+          margin-top: 25pt;
+          font-size: 8pt;
+          color: #94a3b8;
+          text-align: center;
+          border-top: 0.5pt solid #e2e8f0;
+          padding-top: 8pt;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header-title">${bankName} — Finansal Hesap Hareketleri Raporu</div>
+      <div class="meta-text">
+        <strong>Para Birimi:</strong> ${meta.currency || currency} &nbsp;|&nbsp; 
+        <strong>Toplam İşlem:</strong> ${rows.length} Adet &nbsp;|&nbsp; 
+        <strong>Raporlama Tarihi:</strong> ${new Date().toLocaleString('tr-TR')} &nbsp;|&nbsp;
+        <strong>Üretici:</strong> DocuFinance AI (Zero-Knowledge FinTech Engine)
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <table class="kpi-container">
+        <tr>
+          <td class="kpi-box">
+            <div class="kpi-label">Başlangıç Bakiyesi</div>
+            <div class="kpi-val text-dark">${formatCurr(startingBalance)}</div>
+          </td>
+          <td class="kpi-box">
+            <div class="kpi-label">Toplam Giren (+)</div>
+            <div class="kpi-val text-green">+${formatCurr(totalCredit)}</div>
+          </td>
+          <td class="kpi-box">
+            <div class="kpi-label">Toplam Çıkan (-)</div>
+            <div class="kpi-val text-red">-${formatCurr(totalDebit)}</div>
+          </td>
+          <td class="kpi-box">
+            <div class="kpi-label">Net Nakit Akışı</div>
+            <div class="kpi-val ${netFlow >= 0 ? 'text-green' : 'text-red'}">${netFlow >= 0 ? '+' : ''}${formatCurr(netFlow)}</div>
+          </td>
+          <td class="kpi-box">
+            <div class="kpi-label">Kapanış Bakiyesi</div>
+            <div class="kpi-val text-dark">${formatCurr(endingBalance)}</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Detailed Transactions Table -->
+      <h3 style="font-size: 11pt; color: #0f172a; margin-top: 15pt; margin-bottom: 5pt;">Ayrıntılı Hesap Hareketleri</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 4%;">#</th>
+            <th style="width: 10%;">Tarih</th>
+            <th style="width: 36%;">Açıklama / Detay</th>
+            <th style="width: 16%;">Kategori</th>
+            <th style="width: 8%;">TDHP</th>
+            <th style="width: 12%; text-align: right;">Borç (Gider)</th>
+            <th style="width: 12%; text-align: right;">Alacak (Gelir)</th>
+            <th style="width: 12%; text-align: right;">Kalan Bakiye</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row, idx) => {
+            let desc = row.description || '';
+            if (isMasked) desc = maskSensitiveData(desc);
+            const d = parseFinancialNumber(row.debit);
+            const c = parseFinancialNumber(row.credit);
+            const b = parseFinancialNumber(row.balance);
+            return `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${row.date || ''}</td>
+                <td>${desc}</td>
+                <td>${row.category || 'Genel Giderler'}</td>
+                <td style="font-family: Consolas, monospace; font-weight: bold;">${row.accountCode || (c > 0 ? '600.01' : '770.01')}</td>
+                <td style="text-align: right; color: #dc2626; font-weight: bold;">${d > 0 ? formatCurr(d) : '-'}</td>
+                <td style="text-align: right; color: #059669; font-weight: bold;">${c > 0 ? formatCurr(c) : '-'}</td>
+                <td style="text-align: right; font-family: Consolas, monospace;">${formatCurr(b)}</td>
+              </tr>
+            `;
+          }).join('')}
+          <tr class="total-row">
+            <td colspan="4">GENEL TOPLAM (${rows.length} İşlem)</td>
+            <td>TDHP</td>
+            <td style="text-align: right; color: #dc2626;">${formatCurr(totalDebit)}</td>
+            <td style="text-align: right; color: #059669;">${formatCurr(totalCredit)}</td>
+            <td style="text-align: right; font-family: Consolas, monospace;">${formatCurr(endingBalance)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        © 2026 DocuFinance AI • https://www.docufinance.site • Banka Düzeyinde İstemci Tarafı (Zero-Knowledge) Raporlama
+      </div>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\uFEFF' + htmlContent], { type: 'application/msword;charset=utf-8' });
+  const cleanFileName = (fileName.replace(/\.(doc|docx)$/i, '') || 'Banka_Ekstresi_Word_Raporu') + '.doc';
+  triggerBlobDownload(blob, cleanFileName);
 }
