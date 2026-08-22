@@ -262,6 +262,40 @@ export function parseFinancialContent(rawText) {
     const dateMatch = line.match(dateRegex);
     if (!dateMatch) continue;
 
+    // Filter out Summary / Meta / Header lines in Credit Card & Bank Statements
+    // (e.g. "Son Ödeme Tarihi", "Hesap Kesim Tarihi", "Dönem Borcu", "Asgari Ödeme", "Limit")
+    if (
+      upperLine.includes('SON ÖDEME') || 
+      upperLine.includes('SON ODEME') || 
+      upperLine.includes('ÖEME ARII') || 
+      upperLine.includes('ÖDEME TARİH') || 
+      upperLine.includes('ODEME TARIH') || 
+      upperLine.includes('HESAP KESİM') || 
+      upperLine.includes('HESAP KESIM') || 
+      upperLine.includes('DÖNEM BORCU') || 
+      upperLine.includes('DONEM BORCU') || 
+      upperLine.includes('ASGARİ ÖDEME') || 
+      upperLine.includes('ASGARI ODEME') || 
+      upperLine.includes('ASGARİ TUTAR') || 
+      upperLine.includes('ASGARI TUTAR') || 
+      upperLine.includes('TOPLAM BORÇ') || 
+      upperLine.includes('TOPLAM BORC') || 
+      upperLine.includes('KULLANILABİLİR') || 
+      upperLine.includes('KULLANILABILIR') || 
+      upperLine.includes('KART LİMİT') || 
+      upperLine.includes('KART LIMIT') || 
+      upperLine.includes('TOPLAM LİMİT') || 
+      upperLine.includes('TOPLAM LIMIT') || 
+      upperLine.includes('DEVREDEN BAKİYE') || 
+      upperLine.includes('ÖNCEKİ DÖNEM') || 
+      upperLine.includes('ONCEKI DONEM') || 
+      upperLine.includes('PUAN BİLGİ') || 
+      upperLine.includes('PUAN BILGI') || 
+      upperLine.includes('KAZANILAN PUAN')
+    ) {
+      continue;
+    }
+
     const dateStr = dateMatch[1];
     let afterDate = line.substring(line.indexOf(dateStr) + dateStr.length).trim();
 
@@ -274,21 +308,35 @@ export function parseFinancialContent(rawText) {
     let balance = 0;
 
     // Check line semantic markers for Payments / Refunds vs Expenses / Purchases
-    const hasAlacakOrPayment = 
-      upperLine.includes('ÖDEME') || 
-      upperLine.includes('ODEME') || 
-      upperLine.includes('ÖDENDİ') || 
-      upperLine.includes('ODENDI') || 
+    const isExplicitPaymentOrRefund = 
+      upperLine.includes('KART BORÇ ÖDEME') || 
+      upperLine.includes('KART BORC ODEME') || 
+      upperLine.includes('HESAP BORÇ ÖDEME') || 
+      upperLine.includes('HESAP BORC ODEME') || 
+      upperLine.includes('OTOMATİK ÖDEME TAHSİL') || 
+      upperLine.includes('OTOMATIK ODEME TAHSIL') || 
+      upperLine.includes('EFT/HAVALE İLE ÖDEME') || 
+      upperLine.includes('EFT ILE ODEME') || 
+      upperLine.includes('HAVALE ILE ODEME') || 
+      upperLine.includes('ATM\'DEN ÖDEME') || 
+      upperLine.includes('ATM DEN ODEME') || 
+      upperLine.includes('ŞUBEDEN ÖDEME') || 
+      upperLine.includes('SUBEDEN ODEME') || 
+      upperLine.includes('NAKİT ÖDEME') || 
+      upperLine.includes('NAKIT ODEME') || 
+      upperLine.includes('KART ÖDEMESİ') || 
+      upperLine.includes('KART ODEMESI') || 
       upperLine.includes('İADE') || 
       upperLine.includes('IADE') || 
       upperLine.includes('REFUND') || 
+      upperLine.includes('CASHBACK') || 
       upperLine.includes('ALACAK') || 
       upperLine.includes('TAHSİLAT') || 
       upperLine.includes('TAHSILAT') || 
-      upperLine.includes('GELEN') || 
-      upperLine.includes('YATAN') || 
-      upperLine.includes('PAYMENT') || 
-      /\b(A|CR|\+)\b/.test(upperLine) || 
+      upperLine.includes('GELEN HAVALE') || 
+      upperLine.includes('GELEN EFT') || 
+      upperLine.includes('HESABA YATAN') || 
+      /\b(CR|\+)\b/.test(upperLine) || 
       upperLine.endsWith(' A') || 
       upperLine.endsWith(' CR') || 
       upperLine.endsWith(' +');
@@ -332,7 +380,7 @@ export function parseFinancialContent(rawText) {
         balance = val3;
       } else if (val1 > 0 && val2 > 0) {
         if (isCreditCard) {
-          if (hasAlacakOrPayment) {
+          if (isExplicitPaymentOrRefund) {
             credit = val1;
             balance = val3;
           } else {
@@ -346,11 +394,11 @@ export function parseFinancialContent(rawText) {
         }
       } else {
         if (isCreditCard) {
-          if (hasAlacakOrPayment) credit = Math.abs(val1);
+          if (isExplicitPaymentOrRefund) credit = Math.abs(val1);
           else debit = Math.abs(val1);
         } else {
           debit = val1 < 0 ? Math.abs(val1) : (hasBorcOrExpense ? val1 : 0);
-          credit = val1 > 0 ? (hasAlacakOrPayment ? val1 : val1) : 0;
+          credit = val1 > 0 ? (isExplicitPaymentOrRefund ? val1 : val1) : 0;
         }
         balance = val2 || val3;
       }
@@ -363,7 +411,7 @@ export function parseFinancialContent(rawText) {
 
       if (isCreditCard) {
         // In Credit Cards: Purchases are DEBIT (Harcama/Borç/Çıkan), Payments/Refunds are CREDIT (Alacak/Giren)
-        if (hasAlacakOrPayment || amounts[0].includes('+') || (amounts[0].includes('-') && !hasBorcOrExpense)) {
+        if (isExplicitPaymentOrRefund || amounts[0].includes('+') || (amounts[0].includes('-') && !hasBorcOrExpense)) {
           credit = Math.abs(val1);
         } else {
           debit = Math.abs(val1);
@@ -372,7 +420,7 @@ export function parseFinancialContent(rawText) {
         // Checking / Deposit bank account
         if (amounts[0].includes('-') || hasBorcOrExpense || val1 < 0) {
           debit = Math.abs(val1);
-        } else if (amounts[0].includes('+') || hasAlacakOrPayment) {
+        } else if (amounts[0].includes('+') || isExplicitPaymentOrRefund) {
           credit = Math.abs(val1);
         } else {
           // Check common expense vendor names
@@ -387,7 +435,7 @@ export function parseFinancialContent(rawText) {
 
       if (isCreditCard) {
         // In Credit Card statements: All regular purchases are DEBIT (Harcama / Çıkan / Gider)
-        if (hasAlacakOrPayment || amounts[0].includes('+')) {
+        if (isExplicitPaymentOrRefund || amounts[0].includes('+')) {
           credit = Math.abs(amountVal); // Card payment, refund, or cashback
         } else {
           debit = Math.abs(amountVal); // Card purchase / expenditure
@@ -396,7 +444,7 @@ export function parseFinancialContent(rawText) {
         // Checking account
         if (amountVal < 0 || amounts[0].includes('-') || hasBorcOrExpense) {
           debit = Math.abs(amountVal);
-        } else if (hasAlacakOrPayment || amounts[0].includes('+')) {
+        } else if (isExplicitPaymentOrRefund || amounts[0].includes('+')) {
           credit = Math.abs(amountVal);
         } else {
           // Detect expense by vendor / store keywords
