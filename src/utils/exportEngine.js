@@ -35,62 +35,127 @@ export function exportToExcel(parsedData, options = {}) {
   } = options;
 
   const wb = XLSX.utils.book_new();
+  const rows = parsedData.rows || [];
+  const meta = parsedData.meta || {};
 
-  // Prepare Transaction Rows
-  const transactionRows = (parsedData.rows || []).map((row, index) => {
+  // Calculate Aggregates
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  rows.forEach(r => {
+    totalDebit += (r.debit || 0);
+    totalCredit += (r.credit || 0);
+  });
+
+  const startingBalance = meta.startingBalance || 0;
+  const officialEnding = meta.endingBalance || 0;
+  const netFlow = totalCredit - totalDebit;
+  const calculatedEnding = startingBalance + netFlow;
+  const endingBalance = officialEnding || calculatedEnding;
+  const bankName = meta.bankName || 'Banka Ekstresi';
+
+  // Build AOA (Array of Arrays) for Rich Sheet Structure
+  const aoaData = [
+    // Header Row 1: Document Metadata
+    ['DocuFinance AI - Finansal Ekstre ve Hesap Hareketleri Raporu', '', '', '', '', '', '', '', ''],
+    ['Banka / Kurum:', bankName, '', 'Para Birimi:', meta.currency || currency, '', 'Rapor Tarihi:', new Date().toLocaleString('tr-TR'), ''],
+    [],
+    // KPI Cards Block (Başlangıç, Giren, Çıkan, Net Akış, Kapanış)
+    ['BAŞLANGIÇ BAKİYESİ', 'TOPLAM GİREN (+)', 'TOPLAM ÇIKAN (-)', 'NET NAKİT AKIŞI', 'KAPANIŞ BAKİYESİ', 'MUTABAKAT DURUMU', 'İŞLEM SAYISI', '', ''],
+    [
+      startingBalance,
+      totalCredit,
+      totalDebit,
+      netFlow,
+      endingBalance,
+      meta.isReconciled ? 'TAM MUTABAKAT (%100)' : 'KONTROL EDİLMELİ',
+      rows.length,
+      '',
+      ''
+    ],
+    [],
+    // Table Column Headers
+    [
+      'Sıra',
+      'İşlem Tarihi',
+      'Açıklama / Detay',
+      'Kategori',
+      'Hesap Kodu (TDHP)',
+      'Borç / Çıkan (Gider)',
+      'Alacak / Giren (Gelir)',
+      'Net Tutar',
+      'Kalan Bakiye'
+    ]
+  ];
+
+  // Append Individual Transactions
+  rows.forEach((row, index) => {
     let desc = row.description || '';
     if (isMasked) {
       desc = maskSensitiveData(desc);
     }
 
-    return {
-      'Sıra': index + 1,
-      'İşlem Tarihi': row.date || '',
-      'Açıklama / Detay': desc,
-      'Kategori': row.category || 'Genel',
-      'Hesap Kodu (TDHP)': row.accountCode || '',
-      'Borç / Çıkan (Gider)': (row.debit > 0 ? row.debit : 0),
-      'Alacak / Giren (Gelir)': (row.credit > 0 ? row.credit : 0),
-      'Net Tutar': (row.credit || 0) - (row.debit || 0),
-      'Kalan Bakiye': row.balance || 0
-    };
+    aoaData.push([
+      index + 1,
+      row.date || '',
+      desc,
+      row.category || 'Genel Giderler',
+      row.accountCode || (row.credit > 0 ? '600.01' : '770.01'),
+      row.debit > 0 ? row.debit : 0,
+      row.credit > 0 ? row.credit : 0,
+      (row.credit || 0) - (row.debit || 0),
+      row.balance || 0
+    ]);
   });
 
-  const wsTransactions = XLSX.utils.json_to_sheet(transactionRows);
+  // Append Grand Total Row at Bottom
+  aoaData.push([
+    'GENEL TOPLAM',
+    `${rows.length} İşlem`,
+    `Toplam Giren: ${totalCredit.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} | Toplam Çıkan: ${totalDebit.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`,
+    'GENEL',
+    '',
+    totalDebit,
+    totalCredit,
+    netFlow,
+    endingBalance
+  ]);
+
+  const wsTransactions = XLSX.utils.aoa_to_sheet(aoaData);
 
   wsTransactions['!cols'] = [
-    { wch: 6 },   // Sıra
-    { wch: 14 },  // Tarih
-    { wch: 45 },  // Açıklama
-    { wch: 22 },  // Kategori
-    { wch: 18 },  // Hesap Kodu
-    { wch: 20 },  // Borç
-    { wch: 20 },  // Alacak
-    { wch: 18 },  // Net Tutar
-    { wch: 20 }   // Bakiye
+    { wch: 8 },   // Sıra
+    { wch: 15 },  // Tarih
+    { wch: 50 },  // Açıklama
+    { wch: 24 },  // Kategori
+    { wch: 20 },  // Hesap Kodu
+    { wch: 22 },  // Borç
+    { wch: 22 },  // Alacak
+    { wch: 20 },  // Net Tutar
+    { wch: 22 }   // Bakiye
   ];
 
   XLSX.utils.book_append_sheet(wb, wsTransactions, 'Hesap Hareketleri');
 
-  if (includeAuditSheet && parsedData.meta) {
-    const meta = parsedData.meta;
+  // Sheet 2: Audit & Reconciliation Sheet
+  if (includeAuditSheet) {
     const summaryData = [
-      { 'Finansal Rapor Özeti': 'Banka / Kurum', 'Değer': meta.bankName || 'Bilinmiyor' },
+      { 'Finansal Rapor Özeti': 'Banka / Kurum', 'Değer': bankName },
       { 'Finansal Rapor Özeti': 'Para Birimi', 'Değer': meta.currency || currency },
-      { 'Finansal Rapor Özeti': 'Toplam İşlem Adedi', 'Değer': transactionRows.length },
-      { 'Finansal Rapor Özeti': 'Başlangıç Bakiyesi', 'Değer': meta.startingBalance || 0 },
-      { 'Finansal Rapor Özeti': 'Toplam Giren (Gelir)', 'Değer': meta.totalCredit || 0 },
-      { 'Finansal Rapor Özeti': 'Toplam Çıkan (Gider)', 'Değer': meta.totalDebit || 0 },
-      { 'Finansal Rapor Özeti': 'Net Nakit Akışı', 'Değer': meta.netFlow || 0 },
-      { 'Finansal Rapor Özeti': 'Hesaplanan Kapanış Bakiyesi', 'Değer': meta.calculatedEnding || 0 },
-      { 'Finansal Rapor Özeti': 'Resmi Kapanış Bakiyesi', 'Değer': meta.endingBalance || 0 },
-      { 'Finansal Rapor Özeti': 'Bakiye Mutabakatı (Reconciliation)', 'Değer': meta.isReconciled ? 'TAM MUTABAKAT (%100)' : 'KONTROL GEREKİYOR' },
+      { 'Finansal Rapor Özeti': 'Toplam İşlem Adedi', 'Değer': rows.length },
+      { 'Finansal Rapor Özeti': 'Başlangıç Bakiyesi', 'Değer': startingBalance },
+      { 'Finansal Rapor Özeti': 'Toplam Giren (+ Gelir)', 'Değer': totalCredit },
+      { 'Finansal Rapor Özeti': 'Toplam Çıkan (- Gider)', 'Değer': totalDebit },
+      { 'Finansal Rapor Özeti': 'Net Nakit Akışı', 'Değer': netFlow },
+      { 'Finansal Rapor Özeti': 'Hesaplanan Kapanış Bakiyesi', 'Değer': calculatedEnding },
+      { 'Finansal Rapor Özeti': 'Resmi Kapanış Bakiyesi', 'Değer': officialEnding },
+      { 'Finansal Rapor Özeti': 'Bakiye Mutabakatı (Reconciliation)', 'Değer': meta.isReconciled ? 'TAM MUTABAKAT (%100)' : 'FARK BULUNDU' },
       { 'Finansal Rapor Özeti': 'Dönüştürme Motoru', 'Değer': 'DocuFinance AI (Zero-Knowledge)' },
       { 'Finansal Rapor Özeti': 'Rapor Oluşturma Tarihi', 'Değer': new Date().toLocaleString('tr-TR') }
     ];
 
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    wsSummary['!cols'] = [{ wch: 32 }, { wch: 35 }];
+    wsSummary['!cols'] = [{ wch: 35 }, { wch: 35 }];
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Finansal Özet & Mutabakat');
   }
 
