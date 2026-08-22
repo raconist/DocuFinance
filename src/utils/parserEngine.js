@@ -614,55 +614,107 @@ export function parseInvoiceFromUnstructuredText(rawText) {
     if (anyDateMatch) invoiceDate = anyDateMatch[1];
   }
 
-  // 2. Extract Invoice Number / ID
+  // 2. Extract Invoice Number / ID accurately
   let invoiceNo = '';
+  const noSymbolMatch = rawText.match(/№\s*([0-9A-Za-z-]{4,25})/);
   const gibIdMatch = rawText.match(/\b([A-Z]{3}\d{13})\b/);
-  if (gibIdMatch) {
+  const invMatch = rawText.match(/\b(?:Makbuz\/Fatura|Makbuz|Fatura\s*No|Fatura\s*Numarası|Invoice\s*No|Invoice\s*Number|Receipt\s*No|Order\s*No|Sipariş\s*No|Belge\s*No)[\s#:.-]*([A-Z0-9-]{4,25})\b/i);
+  const numMatch = rawText.match(/\bNo\s*[:#.-]?\s*(\d{6,20})\b/i);
+
+  if (noSymbolMatch) {
+    invoiceNo = noSymbolMatch[1].trim();
+  } else if (gibIdMatch) {
     invoiceNo = gibIdMatch[1];
+  } else if (invMatch && !invMatch[1].toLowerCase().includes('lama') && !invMatch[1].toLowerCase().includes('adresi')) {
+    invoiceNo = invMatch[1].trim();
+  } else if (numMatch) {
+    invoiceNo = numMatch[1].trim();
   } else {
-    const invNoRegex = /\b(?:FATURA|E-ARŞİV|E-FATURA|BELGE|INVOICE|SERİ|SIRA|NO)[\s#:.-]*([A-Z0-9-]{4,20})\b/i;
-    const invMatch = rawText.match(invNoRegex);
-    if (invMatch && !invMatch[1].match(/^\d{2}[./-]/)) {
-      invoiceNo = invMatch[1];
-    } else {
-      invoiceNo = `FAT-${Date.now().toString().slice(-6)}`;
-    }
+    invoiceNo = `FAT-${Date.now().toString().slice(-6)}`;
   }
 
-  // 3. Extract VKN / TCKN
+  // 3. Extract VKN / TCKN / VAT ID
   let vkn = '';
-  const vknMatch = rawText.match(/\b(?:VKN|TCKN|VERGİ\s*NO|VERGI\s*NO|TAX\s*ID|T\.C\.)[\s:.-]*(\d{10,11})\b/i);
+  const vknMatch = rawText.match(/\b(?:VKN|TCKN|VERGİ\s*NO|VERGI\s*NO|TAX\s*ID|VAT|T\.C\.)[\s:.-]*(\d{10,11})\b/i);
   if (vknMatch) {
     vkn = vknMatch[1];
   }
 
-  // 4. Extract Supplier / Company Name
+  // 4. Extract Supplier / Vendor / Company Name
   let supplierName = '';
-  for (const line of lines.slice(0, 15)) {
-    const upper = line.toUpperCase();
-    if (
-      upper.includes('A.Ş.') || 
-      upper.includes('A.S.') || 
-      upper.includes('LTD.') || 
-      upper.includes('ŞTİ') || 
-      upper.includes('STI') || 
-      upper.includes('TİC.') || 
-      upper.includes('SAN.') || 
-      upper.includes('PAZARLAMA') || 
-      upper.includes('HİZMETLERİ') ||
-      upper.includes('GMBH') ||
-      upper.includes('INC') ||
-      upper.includes('LLC')
-    ) {
-      supplierName = line.replace(/^(SATICI|GÖNDEREN|FİRMA|UNVAN)[:\s-]*/i, '').trim();
-      break;
+  if (/GODADDY/i.test(rawText)) {
+    supplierName = 'GoDaddy.com, LLC';
+  } else if (/AMAZON|AWS/i.test(rawText)) {
+    supplierName = 'Amazon Web Services (AWS)';
+  } else if (/GOOGLE/i.test(rawText)) {
+    supplierName = 'Google LLC / Google Cloud';
+  } else if (/MICROSOFT/i.test(rawText)) {
+    supplierName = 'Microsoft Corporation';
+  } else if (/APPLE/i.test(rawText)) {
+    supplierName = 'Apple Inc.';
+  } else if (/TURKCELL/i.test(rawText)) {
+    supplierName = 'Turkcell İletişim Hizmetleri A.Ş.';
+  } else if (/VODAFONE/i.test(rawText)) {
+    supplierName = 'Vodafone Telekomünikasyon A.Ş.';
+  } else if (/TURK TELEKOM/i.test(rawText)) {
+    supplierName = 'Türk Telekomünikasyon A.Ş.';
+  } else if (/MIGROS/i.test(rawText)) {
+    supplierName = 'Migros Ticaret A.Ş.';
+  } else if (/TRENDYOL/i.test(rawText)) {
+    supplierName = 'DSM Grup (Trendyol)';
+  } else if (/HEPSIBURADA/i.test(rawText)) {
+    supplierName = 'D-Market (Hepsiburada)';
+  } else {
+    for (const line of lines) {
+      if (line.includes('FATURALAMA ADRESİ') || line.includes('MÜŞTERİ NO') || line.includes('ALICI:')) continue;
+      const upper = line.toUpperCase();
+      if (
+        upper.includes('A.Ş.') || 
+        upper.includes('A.S.') || 
+        upper.includes('LTD.') || 
+        upper.includes('ŞTİ') || 
+        upper.includes('STI') || 
+        upper.includes('TİC.') || 
+        upper.includes('SAN.') || 
+        upper.includes('PAZARLAMA') || 
+        upper.includes('HİZMETLERİ') ||
+        upper.includes('GMBH') ||
+        upper.includes('INC') ||
+        upper.includes('LLC')
+      ) {
+        supplierName = line.replace(/^(SATICI|GÖNDEREN|FİRMA|UNVAN|REFERANS)[:\s-]*/i, '').trim();
+        break;
+      }
     }
   }
   if (!supplierName) {
-    supplierName = lines[0]?.length < 50 ? lines[0] : 'Ticari Fatura / Satıcı';
+    supplierName = lines[0]?.length < 50 ? lines[0] : 'Ticari Satıcı / Firma';
   }
 
-  // 5. Extract Financial Amounts (Matrah, KDV, Ödenecek Tutar)
+  // 5. Extract Product / Service Item Description
+  let itemDescription = '';
+  for (const line of lines) {
+    if (
+      line.includes('Alan Adı') || 
+      line.includes('Domain') || 
+      line.includes('Hosting') || 
+      line.includes('Sunucu') || 
+      line.includes('.SITE') || 
+      line.includes('.COM') || 
+      line.includes('.NET') ||
+      line.includes('Yazılım') || 
+      line.includes('Lisans') || 
+      line.includes('Abonelik')
+    ) {
+      itemDescription = line.replace(/^[\d\s]+(?:yıl|ay|adet)?\s*/i, '').trim();
+      break;
+    }
+  }
+  if (!itemDescription) {
+    itemDescription = `Fatura No: ${invoiceNo} Hizmet / Alım Bedeli`;
+  }
+
+  // 6. Extract Financial Amounts (Matrah, KDV, Ödenecek Tutar)
   const amountPattern = /[-+]?\b\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})\b/g;
   let payableAmount = 0;
   let taxAmount = 0;
@@ -680,6 +732,8 @@ export function parseInvoiceFromUnstructuredText(rawText) {
       upper.includes('ODENECEK') || 
       upper.includes('GENEL TOPLAM') || 
       upper.includes('TOPLAM TUTAR') || 
+      upper.includes('TOPLAM (TRY)') || 
+      upper.includes('TOPLAM (TL)') || 
       upper.includes('VERGİLER DAHİL') || 
       upper.includes('TOTAL AMOUNT') || 
       upper.includes('TOTAL PAYABLE')
@@ -689,8 +743,10 @@ export function parseInvoiceFromUnstructuredText(rawText) {
       upper.includes('HESAPLANAN KDV') || 
       upper.includes('KDV TUTARI') || 
       upper.includes('TOPLAM KDV') || 
+      upper.includes('VERGİLER') || 
       upper.includes('KDV (%') || 
-      upper.includes('VAT AMOUNT')
+      upper.includes('VAT AMOUNT') || 
+      upper.includes('VAT (%')
     ) {
       if (lastVal > 0) taxAmount = lastVal;
     } else if (
@@ -722,15 +778,19 @@ export function parseInvoiceFromUnstructuredText(rawText) {
     taxAmount = +(payableAmount - matrah).toFixed(2);
   }
 
-  const description = `Fatura: ${invoiceNo} | ${supplierName} (Matrah: ${matrah.toFixed(2)}, KDV: ${taxAmount.toFixed(2)}${vkn ? `, VKN: ${vkn}` : ''})`;
+  const isTechOrDomain = /Alan Adı|Domain|Hosting|GoDaddy|Yazılım|Cloud|AWS|Google|Sunucu/i.test(itemDescription + ' ' + supplierName);
+  const category = isTechOrDomain ? 'Yazılım & Bulut (Domain)' : 'Fatura & Hizmet Alımı';
+  const accountCode = isTechOrDomain ? '770.07' : '770.08';
+  const accountName = isTechOrDomain ? 'Yazılım ve Alan Adı Giderleri' : 'Fatura Giderleri ve Alışlar';
 
   const invoiceRow = {
     id: `inv_${Date.now()}_1`,
     date: invoiceDate,
-    description: description,
-    category: 'Fatura & Hizmet Alımı',
-    accountCode: '770.08',
-    accountName: 'Fatura Giderleri ve Alışlar',
+    supplier: supplierName,
+    description: itemDescription,
+    category: category,
+    accountCode: accountCode,
+    accountName: accountName,
     debit: payableAmount,
     credit: 0,
     amount: -payableAmount,
@@ -745,7 +805,7 @@ export function parseInvoiceFromUnstructuredText(rawText) {
 
   return {
     meta: {
-      bankName: `e-Fatura / Fatura (${invoiceNo})`,
+      bankName: `Fatura: ${supplierName} (${invoiceNo})`,
       currency: currency,
       transactionCount: 1,
       startingBalance: 0,

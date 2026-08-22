@@ -193,6 +193,7 @@ export default function DataStudio({
     let rows = (data.rows || []).filter(row => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = 
+        (row.supplier || row.supplierName || '').toLowerCase().includes(q) ||
         (row.description || '').toLowerCase().includes(q) ||
         (row.date || '').includes(searchQuery) ||
         (row.category && row.category.toLowerCase().includes(q)) ||
@@ -891,50 +892,56 @@ export default function DataStudio({
                 />
               </th>
               <th style={{ width: '45px' }}>#</th>
-              <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => handleSort('date')}>
+              <th style={{ width: '110px', cursor: 'pointer' }} onClick={() => handleSort('date')}>
                 <div className="flex items-center gap-1.5 hover:text-emerald-500">
                   <span>{t.dateCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('description')}>
+              <th style={{ width: '180px', cursor: 'pointer' }} onClick={() => handleSort('supplier')}>
                 <div className="flex items-center gap-1.5 hover:text-emerald-500">
-                  <span>{t.descCol}</span>
+                  <span>Firma / Satıcı / Gönderen</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '150px' }}>{t.categoryCol}</th>
-              <th style={{ width: '110px', cursor: 'pointer' }} onClick={() => handleSort('accountCode')}>
+              <th style={{ minWidth: '200px', cursor: 'pointer' }} onClick={() => handleSort('description')}>
+                <div className="flex items-center gap-1.5 hover:text-emerald-500">
+                  <span>Açıklama / İşlem Detayı</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+              <th style={{ width: '140px' }}>{t.categoryCol}</th>
+              <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => handleSort('accountCode')}>
                 <div className="flex items-center gap-1.5 hover:text-emerald-500">
                   <span>TDHP Kodu</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('debit')}>
+              <th style={{ width: '120px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('debit')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.debitCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('credit')}>
+              <th style={{ width: '120px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('credit')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.creditCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '130px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('balance')}>
+              <th style={{ width: '120px', textAlign: 'right', cursor: 'pointer' }} onClick={() => handleSort('balance')}>
                 <div className="flex items-center justify-end gap-1.5 hover:text-emerald-500">
                   <span>{t.balanceCol}</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
-              <th style={{ width: '50px', textAlign: 'center' }}>{t.deleteCol}</th>
+              <th style={{ width: '45px', textAlign: 'center' }}>{t.deleteCol}</th>
             </tr>
           </thead>
           <tbody>
             {filteredAndSortedRows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-12 text-slate-400 text-xs">
+                <td colSpan={11} className="text-center py-12 text-slate-400 text-xs">
                   Aramanıza uygun işlem bulunamadı.
                 </td>
               </tr>
@@ -974,6 +981,18 @@ export default function DataStudio({
                     </td>
 
                     <td>
+                      <input
+                        type="text"
+                        value={row.supplier || row.supplierName || ''}
+                        placeholder="Firma / Gönderen..."
+                        onChange={(e) => handleCellEdit(rowId, 'supplier', e.target.value)}
+                        className={`bg-transparent text-xs font-semibold border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none ${
+                          isDark ? 'text-amber-300 font-bold' : 'text-amber-800 font-bold'
+                        }`}
+                      />
+                    </td>
+
+                    <td>
                       <div className="flex items-center gap-1.5">
                         {row.isDuplicate && (
                           <span title="Mükerrer (Çift) Kayıt" className="flex-shrink-0 text-amber-400 text-[10px] font-bold px-1 rounded bg-amber-500/20">
@@ -983,6 +1002,7 @@ export default function DataStudio({
                         <input
                           type="text"
                           value={desc}
+                          placeholder="Açıklama / Detay..."
                           onChange={(e) => handleCellEdit(rowId, 'description', e.target.value)}
                           className={`bg-transparent text-xs border-b border-transparent hover:border-slate-500 focus:border-emerald-500 px-1 py-1 rounded w-full outline-none font-medium ${
                             isDark ? 'text-slate-100' : 'text-slate-950'

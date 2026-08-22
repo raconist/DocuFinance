@@ -79,6 +79,7 @@ export function exportToExcel(parsedData, options = {}) {
     [
       'Sıra',
       'İşlem Tarihi',
+      'Firma / Satıcı / Gönderen',
       'Açıklama / Detay',
       'Kategori',
       'Hesap Kodu (TDHP)',
@@ -99,10 +100,12 @@ export function exportToExcel(parsedData, options = {}) {
     const rowDebit = parseFinancialNumber(row.debit);
     const rowCredit = parseFinancialNumber(row.credit);
     const rowBalance = parseFinancialNumber(row.balance);
+    const supplier = row.supplier || row.supplierName || '';
 
     aoaData.push([
       index + 1,
       row.date || '',
+      supplier,
       desc,
       row.category || 'Genel Giderler',
       row.accountCode || (rowCredit > 0 ? '600.01' : '770.01'),
@@ -701,13 +704,14 @@ export function exportToWord(parsedData, options = {}) {
         <thead>
           <tr>
             <th style="width: 4%;">#</th>
-            <th style="width: 10%;">Tarih</th>
-            <th style="width: 36%;">Açıklama / Detay</th>
-            <th style="width: 16%;">Kategori</th>
-            <th style="width: 8%;">TDHP</th>
-            <th style="width: 12%; text-align: right;">Borç (Gider)</th>
-            <th style="width: 12%; text-align: right;">Alacak (Gelir)</th>
-            <th style="width: 12%; text-align: right;">Kalan Bakiye</th>
+            <th style="width: 9%;">Tarih</th>
+            <th style="width: 18%;">Firma / Satıcı</th>
+            <th style="width: 25%;">Açıklama / Detay</th>
+            <th style="width: 14%;">Kategori</th>
+            <th style="width: 7%;">TDHP</th>
+            <th style="width: 11%; text-align: right;">Borç (Gider)</th>
+            <th style="width: 11%; text-align: right;">Alacak (Gelir)</th>
+            <th style="width: 11%; text-align: right;">Kalan Bakiye</th>
           </tr>
         </thead>
         <tbody>
@@ -717,10 +721,12 @@ export function exportToWord(parsedData, options = {}) {
             const d = parseFinancialNumber(row.debit);
             const c = parseFinancialNumber(row.credit);
             const b = parseFinancialNumber(row.balance);
+            const supplier = row.supplier || row.supplierName || '';
             return `
               <tr>
                 <td>${idx + 1}</td>
                 <td>${row.date || ''}</td>
+                <td style="font-weight: bold; color: #1e293b;">${supplier}</td>
                 <td>${desc}</td>
                 <td>${row.category || 'Genel Giderler'}</td>
                 <td style="font-family: Consolas, monospace; font-weight: bold;">${row.accountCode || (c > 0 ? '600.01' : '770.01')}</td>
@@ -731,7 +737,7 @@ export function exportToWord(parsedData, options = {}) {
             `;
           }).join('')}
           <tr class="total-row">
-            <td colspan="4">GENEL TOPLAM (${rows.length} İşlem)</td>
+            <td colspan="5">GENEL TOPLAM (${rows.length} İşlem)</td>
             <td>TDHP</td>
             <td style="text-align: right; color: #dc2626;">${formatCurr(totalDebit)}</td>
             <td style="text-align: right; color: #059669;">${formatCurr(totalCredit)}</td>
