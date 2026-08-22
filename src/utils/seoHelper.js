@@ -92,7 +92,7 @@ export function updatePageSeo({
 export function generateBankSeoSchemas(bankData) {
   if (!bankData) return [];
 
-  const canonicalUrl = `https://docufinance.vercel.app/convert/${bankData.slug}`;
+  const canonicalUrl = `https://docufinance.site/convert/${bankData.slug}`;
 
   // 1. BreadcrumbList Schema
   const breadcrumbSchema = {
@@ -103,13 +103,13 @@ export function generateBankSeoSchemas(bankData) {
         '@type': 'ListItem',
         'position': 1,
         'name': 'Ana Sayfa',
-        'item': 'https://docufinance.vercel.app/'
+        'item': 'https://docufinance.site/'
       },
       {
         '@type': 'ListItem',
         'position': 2,
         'name': 'Banka & Muhasebe Ekstre Çevirici',
-        'item': 'https://docufinance.vercel.app/#banks'
+        'item': 'https://docufinance.site/#banks'
       },
       {
         '@type': 'ListItem',

@@ -30,5 +30,5 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: https://docufinance.vercel.app/sitemap.xml
-Host: https://docufinance.vercel.app
+Sitemap: https://docufinance.site/sitemap.xml
+Host: https://docufinance.site

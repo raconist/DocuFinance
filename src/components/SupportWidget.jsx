@@ -47,7 +47,7 @@ export default function SupportWidget({ theme = 'dark', lang = 'tr' }) {
     const body = encodeURIComponent(
       `${topicObj.msg}\n\nDetay / Not: ${customNote.trim()}\n\n---\nGönderildiği Yer: DocuFinance Web Platformu`
     );
-    window.location.href = `mailto:recep.adnc@gmail.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:support@docufinance.site?subject=${subject}&body=${body}`;
     setIsOpen(false);
   };
 
@@ -101,7 +101,26 @@ export default function SupportWidget({ theme = 'dark', lang = 'tr' }) {
           </div>
 
           {/* Body */}
-          <form onSubmit={handleStartWhatsApp} className="p-4 space-y-3.5 text-xs">
+          <form onSubmit={handleStartWhatsApp} className="p-4 space-y-3 text-xs">
+            
+            {/* Direct Email Support Banner */}
+            <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
+              isDark ? 'bg-slate-950/70 border-emerald-500/20' : 'bg-emerald-50/60 border-emerald-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <div>
+                  <div className="text-[10px] text-slate-400 font-semibold">{lang === 'tr' ? 'Kurumsal Destek E-Postası' : 'Corporate Support Desk'}</div>
+                  <a href="mailto:support@docufinance.site" className="text-xs font-bold text-emerald-400 hover:underline">
+                    support@docufinance.site
+                  </a>
+                </div>
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                &lt; 2 Saatte Yanıt
+              </span>
+            </div>
+
             <label className="block text-slate-400 font-bold text-[11px]">
               {lang === 'tr' ? 'Size nasıl yardımcı olabiliriz?' : 'How can we help you today?'}
             </label>
@@ -156,7 +175,7 @@ export default function SupportWidget({ theme = 'dark', lang = 'tr' }) {
                 className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 font-bold text-xs flex items-center justify-center gap-2 transition-all"
               >
                 <Mail className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{lang === 'tr' ? 'E-Posta / Destek Talebi Gönder' : 'Send Email Ticket'}</span>
+                <span>{lang === 'tr' ? 'support@docufinance.site ile Mail At' : 'Email support@docufinance.site'}</span>
               </button>
             </div>
 

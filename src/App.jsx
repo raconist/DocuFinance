@@ -12,6 +12,7 @@ import AdminPanelModal from './components/AdminPanelModal';
 import RewardedAdModal from './components/RewardedAdModal';
 import ProgrammaticSeoDirectory from './components/ProgrammaticSeoDirectory';
 import SupportWidget from './components/SupportWidget';
+import LegalPoliciesModal from './components/LegalPoliciesModal';
 import { SAMPLE_STATEMENTS, parseFinancialContent } from './utils/parserEngine';
 import { generateDocumentHash } from './utils/security';
 import { saveStatementToLocalDB } from './utils/dbStorage';
@@ -19,7 +20,7 @@ import { getCurrentUser, incrementUserStats } from './utils/authService';
 import { isRewardedBonusActive } from './utils/rewardedAdService';
 import { TRANSLATIONS } from './utils/i18n';
 import { updatePageSeo } from './utils/seoHelper';
-import { ShieldCheck, Heart, FileSpreadsheet, Lock, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Heart, FileSpreadsheet, Lock, AlertCircle, Scale, Shield, RefreshCw, Mail } from 'lucide-react';
 
 export default function App() {
   const [parsedData, setParsedData] = useState(null);
@@ -31,6 +32,8 @@ export default function App() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isRewardedAdOpen, setIsRewardedAdOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState('terms');
   const [bonusKey, setBonusKey] = useState(0); // for reactivity
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [currentView, setCurrentView] = useState(() => {
@@ -142,7 +145,7 @@ export default function App() {
       title: 'DocuFinance AI | PDF Banka Ekstresi & Faturadan Excel/CSV Çevirici (Zero-Knowledge)',
       description: 'Tüm Türk ve Dünya bankalarının PDF ekstrelerini saniyeler içinde formüllü Excel (.xlsx), CSV ve muhasebe formatlarına (Luca, Zirve, Logo, QuickBooks) dönüştürün.',
       keywords: 'banka ekstresi excel çevirme, garanti ekstre excel, iş bankası hesap özeti aktarma, akbank ekstre excel, ziraat dekont excel, luca ekstre aktarma, zirve ekstre aktarımı',
-      canonicalUrl: 'https://docufinance.vercel.app/'
+      canonicalUrl: 'https://docufinance.site/'
     });
   };
 
@@ -340,42 +343,132 @@ export default function App() {
 
       </main>
 
-      {/* Modern Footer */}
-      <footer className={`border-t py-10 text-xs transition-colors duration-300 ${
-        isDark ? 'border-white/5 bg-[#060911] text-slate-500' : 'border-slate-200 bg-white text-slate-500 shadow-inner'
+      {/* Modern High-Trust SaaS Footer */}
+      <footer className={`border-t py-12 text-xs transition-colors duration-300 ${
+        isDark ? 'border-white/5 bg-[#060911] text-slate-400' : 'border-slate-200 bg-white text-slate-600 shadow-inner'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="flex items-center gap-2.5">
-            <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-            <span className={`font-bold font-display text-sm ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
-              DocuFinance.ai
-            </span>
-            <span className="text-slate-400">|</span>
-            <span>© 2026 {lang === 'tr' ? 'Tüm Hakları Saklıdır.' : 'All rights reserved.'}</span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Col 1: Brand & Security */}
+            <div className="md:col-span-1 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                <span className={`font-bold font-display text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  DocuFinance.ai
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {lang === 'tr' 
+                  ? 'Banka ekstreleri ve faturaları sıfır-bilgi güvenliğiyle saniyeler içinde Excel ve muhasebe formatlarına dönüştürün.' 
+                  : 'Zero-knowledge client-side financial document parsing engine for accountants and modern businesses.'}
+              </p>
+              <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-medium">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>KVKK & GDPR Compliant • SSL 256-bit</span>
+              </div>
+            </div>
+
+            {/* Col 2: Navigation */}
+            <div>
+              <h4 className={`font-bold text-xs uppercase tracking-wider mb-3 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
+                {lang === 'tr' ? 'Hızlı Erişim' : 'Navigation'}
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-400">
+                <li>
+                  <button onClick={handleGoHome} className="hover:text-emerald-400 transition-colors">
+                    {lang === 'tr' ? 'Ana Sayfa' : 'Home'}
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setIsPricingOpen(true)} className="hover:text-emerald-400 transition-colors">
+                    {t.pricingBtn}
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setCurrentView('seo')} className="hover:text-emerald-400 transition-colors">
+                    {t.banksBtn}
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setIsHistoryOpen(true)} className="hover:text-emerald-400 transition-colors">
+                    {t.historyBtn}
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 3: Legal & Trust (Essential for Lemon / Stripe) */}
+            <div>
+              <h4 className={`font-bold text-xs uppercase tracking-wider mb-3 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
+                {lang === 'tr' ? 'Yasal & Güvenlik' : 'Legal & Compliance'}
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-400">
+                <li>
+                  <button 
+                    onClick={() => { setLegalTab('terms'); setIsLegalOpen(true); }} 
+                    className="hover:text-emerald-400 transition-colors text-left"
+                  >
+                    {lang === 'tr' ? 'Kullanım Şartları (Terms)' : 'Terms of Service'}
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => { setLegalTab('privacy'); setIsLegalOpen(true); }} 
+                    className="hover:text-emerald-400 transition-colors text-left"
+                  >
+                    {lang === 'tr' ? 'Gizlilik Politikası (Privacy)' : 'Privacy Policy'}
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => { setLegalTab('refund'); setIsLegalOpen(true); }} 
+                    className="hover:text-emerald-400 transition-colors text-left"
+                  >
+                    {lang === 'tr' ? '14 Gün İade Politikası (Refund)' : '14-Day Refund Policy'}
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => setIsSecurityOpen(true)} 
+                    className="hover:text-emerald-400 transition-colors text-left"
+                  >
+                    {t.zeroKnowledgeBadge}
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 4: Contact & Identity */}
+            <div>
+              <h4 className={`font-bold text-xs uppercase tracking-wider mb-3 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
+                {lang === 'tr' ? 'İletişim & Destek' : 'Support & Contact'}
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-400">
+                <li>
+                  <button 
+                    onClick={() => { setLegalTab('contact'); setIsLegalOpen(true); }} 
+                    className="hover:text-emerald-400 transition-colors text-left"
+                  >
+                    {lang === 'tr' ? 'Yasal Bilgi & Impressum' : 'Legal Notice & Impressum'}
+                  </button>
+                </li>
+                <li>
+                  <a href="mailto:support@docufinance.site" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>support@docufinance.site</span>
+                  </a>
+                </li>
+                <li className="text-[11px] text-slate-400">
+                  {lang === 'tr' ? '7/24 Teknik & Müşteri Desteği' : '24/7 Priority SaaS Support'}
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <div className="flex items-center gap-5 text-slate-400">
-            <button onClick={handleGoHome} className="hover:text-emerald-500 transition-colors">
-              {lang === 'tr' ? 'Ana Sayfa' : 'Home'}
-            </button>
-            <button onClick={() => setIsHistoryOpen(true)} className="hover:text-emerald-500 transition-colors">
-              {t.historyBtn}
-            </button>
-            <button onClick={() => setIsSecurityOpen(true)} className="hover:text-emerald-500 transition-colors">
-              {t.zeroKnowledgeBadge}
-            </button>
-            <button onClick={() => setCurrentView('seo')} className="hover:text-emerald-500 transition-colors">
-              {t.banksBtn}
-            </button>
-            <button onClick={() => setIsPricingOpen(true)} className="hover:text-emerald-500 transition-colors">
-              {t.pricingBtn}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span>KVKK & GDPR Compliant FinTech Engine</span>
+          <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <span>© 2026 DocuFinance. {lang === 'tr' ? 'Tüm Hakları Saklıdır.' : 'All rights reserved.'}</span>
+            <span>Zero-Knowledge Browser-Native Document Processing Architecture</span>
           </div>
 
         </div>
@@ -451,6 +544,15 @@ export default function App() {
         }}
         theme={theme}
         lang={lang}
+      />
+
+      {/* Comprehensive Legal & Compliance Modal (Terms / Privacy / Refund / Contact) */}
+      <LegalPoliciesModal
+        isOpen={isLegalOpen}
+        onClose={() => setIsLegalOpen(false)}
+        initialTab={legalTab}
+        lang={lang}
+        theme={theme}
       />
 
       {/* Floating 24/7 WhatsApp & Live Support Widget */}
