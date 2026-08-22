@@ -80,14 +80,14 @@ export function isRewardedBonusActive() {
   return bonus !== null && bonus.active === true;
 }
 
-export function grantRewardedBonus(hours = 24) {
+export function grantRewardedBonus(minutes = 10) {
   if (typeof window === 'undefined' || !window.localStorage) return null;
   recordAdWatch(); // Increment daily watch counter
   const bonus = {
     active: true,
     multiplier: 2,
     unlockedAt: Date.now(),
-    expiresAt: Date.now() + hours * 60 * 60 * 1000,
+    expiresAt: Date.now() + minutes * 60 * 1000,
     features: ['ai_cfo', 'double_rows', 'auto_categorize', 'batch_5']
   };
   try {
@@ -103,7 +103,11 @@ export function getRemainingBonusTime() {
   if (!bonus) return null;
   const diffMs = bonus.expiresAt - Date.now();
   if (diffMs <= 0) return null;
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}s ${minutes}d`;
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes > 0) {
+    return `${minutes}dk ${seconds}sn`;
+  }
+  return `${seconds}sn`;
 }

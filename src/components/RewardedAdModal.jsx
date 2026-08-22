@@ -75,7 +75,7 @@ export default function RewardedAdModal({
   };
 
   const handleClaimReward = () => {
-    const bonus = grantRewardedBonus(24);
+    const bonus = grantRewardedBonus(10);
     if (currentUser) {
       updateUserBonus(bonus);
     }
@@ -111,7 +111,7 @@ export default function RewardedAdModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-extrabold font-display">
-                  {lang === 'tr' ? '10 Saniyelik Video ile 2X Limit Kazan!' : 'Watch 10s Video & Get 2X Limits!'}
+                  {lang === 'tr' ? '10s Video İzle, 10 Dakika 2X Hız & Limit Kazan!' : 'Watch 10s Video & Get 10-Min 2X Booster!'}
                 </h3>
                 {currentUser && (
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -153,7 +153,7 @@ export default function RewardedAdModal({
                     Önce Ücretsiz Hesabınıza Giriş Yapın
                   </h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
-                    Videodan kazanacağınız <strong>2X Ekstre Limitini ve AI CFO Modülünü</strong> hesabınıza güvenle tanımlayabilmemiz için lütfen giriş yapın veya 10 saniyede hesap oluşturun.
+                    Videodan kazanacağınız <strong>10 Dakikalık 2X Ekstre Limitini ve AI CFO Modülünü</strong> hesabınıza güvenle tanımlayabilmemiz için lütfen giriş yapın veya 10 saniyede hesap oluşturun.
                   </p>
                 </div>
                 
@@ -210,7 +210,7 @@ export default function RewardedAdModal({
                 <div>
                   <h4 className="font-extrabold text-base text-white">Sponsor Videosu (10 Saniye)</h4>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
-                    Videoyu tamamlayınca <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 24 saat boyunca 100 satır ve AI CFO yüklenecektir.
+                    Videoyu tamamlayınca <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 10 dakika boyunca 100 satır ve AI CFO yüklenecektir.
                   </p>
                 </div>
                 <button
@@ -262,7 +262,7 @@ export default function RewardedAdModal({
                 </div>
                 <h4 className="font-extrabold text-lg text-emerald-400">Tebrikler! Ödülünüz Hazır!</h4>
                 <p className="text-xs text-slate-300">
-                  <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 24 saat geçerli <strong>2X Kota ve AI CFO Modülü</strong> başarıyla tanımlandı.
+                  <strong>{currentUser.companyName || currentUser.name}</strong> hesabınıza 10 dakika geçerli <strong>2X Kota ve AI CFO Modülü</strong> başarıyla tanımlandı.
                 </p>
                 <button
                   onClick={handleClaimReward}
@@ -299,7 +299,7 @@ export default function RewardedAdModal({
               isDark ? 'bg-slate-950/60 border-white/5' : 'bg-slate-50 border-slate-200'
             }`}>
               <Clock className="w-4 h-4 text-rose-400 flex-shrink-0" />
-              <span>Tam <strong>24 Saat Kesintisiz</strong> Erişim</span>
+              <span>Tam <strong>10 Dakika Hızlı</strong> Erişim</span>
             </div>
           </div>
 

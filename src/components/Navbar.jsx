@@ -39,6 +39,14 @@ export default function Navbar({
   const t = TRANSLATIONS[lang] || TRANSLATIONS.tr;
   const isDark = theme === 'dark';
   const isPro = currentUser?.tier?.includes('pro');
+  const [bonusTime, setBonusTime] = useState(() => getRemainingBonusTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBonusTime(getRemainingBonusTime());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <header className={`sticky top-0 z-40 w-full border-b transition-colors duration-300 backdrop-blur-xl ${
@@ -208,17 +216,17 @@ export default function Navbar({
             <button
               onClick={onOpenRewardedAd}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${
-                isRewardedBonusActive()
-                  ? 'bg-amber-950/50 border-amber-500/50 text-amber-300 animate-pulse'
+                bonusTime
+                  ? 'bg-amber-950/50 border-amber-500/50 text-amber-300 animate-pulse ring-2 ring-amber-500/20'
                   : 'bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 hover:from-amber-400 font-extrabold hover:scale-105'
               }`}
-              title="10 saniyelik video izle, 24 saat 2X kota ve AI CFO kazan!"
+              title="10 saniyelik video izle, 10 dakika boyunca 2X kota ve AI CFO kazan!"
             >
-              {isRewardedBonusActive() ? (
+              {bonusTime ? (
                 <>
-                  <Zap className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                  <span className="hidden md:inline">2X Aktif ({getRemainingBonusTime() || '24s'})</span>
-                  <span className="md:hidden">2X Aktif</span>
+                  <Zap className="w-3.5 h-3.5 text-amber-400 fill-current animate-bounce" />
+                  <span className="hidden md:inline">2X Hız Aktif ({bonusTime})</span>
+                  <span className="md:hidden">2X ({bonusTime})</span>
                 </>
               ) : (
                 <>
